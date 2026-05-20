@@ -1,5 +1,5 @@
-import { Heart, Link as LinkIcon, RefreshCw, UserCircle, MessageSquare, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { Heart, Link as LinkIcon, RefreshCw, UserCircle, MessageSquare, CheckCircle2, Loader2, ArrowRight, Twitter } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useWallet } from "./WalletContext";
 
 interface TaskProps {
@@ -11,73 +11,149 @@ interface TaskProps {
   onClick?: () => void;
   verified?: boolean;
   href?: string;
+  actionButton?: React.ReactNode;
 }
 
-const Task = ({ label, placeholder, icon, isInput = true, value, onClick, verified, href }: TaskProps) => (
+const Task = ({ label, placeholder, icon, isInput = true, value, onClick, verified, href, actionButton }: TaskProps) => (
   <div className="flex flex-col gap-2 mb-5">
     <div className="flex items-center justify-between">
       <label className="text-xs font-semibold tracking-wider text-brand-primary uppercase font-mono">{label}</label>
       {verified && <span className="text-[10px] flex items-center gap-1 text-green-500 font-bold tracking-widest uppercase"><CheckCircle2 size={12}/> Verified</span>}
     </div>
-    <div className="relative group">
-      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-brand-accent">
-        {icon}
+    <div className="flex items-center gap-2">
+      <div className="relative group flex-grow">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-brand-accent">
+          {icon}
+        </div>
+        {isInput ? (
+          <input 
+            type="text" 
+            defaultValue={value}
+            placeholder={placeholder}
+            disabled={verified}
+            className="block w-full pl-10 pr-3 py-3 border border-brand-border rounded-sm bg-brand-bg-light/50 text-sm focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors placeholder:text-brand-muted/70 disabled:opacity-70 disabled:bg-gray-100"
+          />
+        ) : (
+          <a 
+            href={href || "#"} 
+            target="_blank" 
+            rel="noreferrer"
+            onClick={onClick}
+            className="w-full flex items-center justify-between pl-10 pr-4 py-3 border border-brand-border rounded-sm bg-brand-bg-light/30 text-sm hover:bg-brand-bg-light transition-colors text-brand-accent font-medium text-left"
+          >
+            <span>{placeholder}</span>
+            <ArrowRight size={14} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+          </a>
+        )}
       </div>
-      {isInput ? (
-        <input 
-          type="text" 
-          defaultValue={value}
-          placeholder={placeholder}
-          disabled={verified}
-          className="block w-full pl-10 pr-3 py-3 border border-brand-border rounded-sm bg-brand-bg-light/50 text-sm focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors placeholder:text-brand-muted/70 disabled:opacity-70 disabled:bg-gray-100"
-        />
-      ) : (
-        <a 
-          href={href || "#"} 
-          target="_blank" 
-          rel="noreferrer"
-          onClick={onClick}
-          className="w-full flex items-center justify-between pl-10 pr-4 py-3 border border-brand-border rounded-sm bg-brand-bg-light/30 text-sm hover:bg-brand-bg-light transition-colors text-brand-accent font-medium text-left"
-        >
-          <span>{placeholder}</span>
-          <ArrowRight size={14} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-        </a>
-      )}
+      {actionButton}
     </div>
   </div>
 );
 
 export function WLStages() {
   const { walletAddress } = useWallet();
-  const [loadingAction, setLoadingAction] = useState(false);
-  const [verifiedActions, setVerifiedActions] = useState({ liked: false, retweeted: false, replied: false });
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [verifiedActions, setVerifiedActions] = useState({ follow: false, retweet: false, tweet: false });
+  const [xConnected, setXConnected] = useState(false);
+  const [xConnecting, setXConnecting] = useState(false);
+  
   const targetPostUrl = "https://x.com/LuxVaultAI/status/1855172174308425951";
+  const targetAccount = "LuxVaultAI";
+  const requiredText = "@LuxVaultAI";
 
-  const handleVerify = async () => {
+  const handleConnectX = async () => {
     if (!walletAddress) {
       alert("Please connect your wallet first.");
       return;
     }
     
     try {
-      setLoadingAction(true);
-      const res = await fetch("/api/campaigns/verify", {
+      setXConnecting(true);
+      const res = await fetch("/api/campaigns/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ walletAddress })
       });
       const data = await res.json();
-      if (res.status === 500 && data.error) {
-        alert("Server Error: " + data.error);
-      } else if (data.needsConnection) {
-        alert("Not connected to X. Please connect.");
-      } else if (data.success) {
-        setVerifiedActions(data.verified);
+      if (data.connected) {
+        setXConnected(true);
+      } else {
+        alert("Failed to connect X.");
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingAction(false);
+      setXConnecting(false);
+    }
+  };
+
+  const handleVerifyFollow = async () => {
+    if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    
+    try {
+      setLoadingAction("follow");
+      const res = await fetch("/api/verify/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress, targetAccount })
+      });
+      const data = await res.json();
+      if (data.verified) {
+        setVerifiedActions(prev => ({ ...prev, follow: true }));
+      } else {
+        alert("Follow not verified yet. Try again.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleVerifyRetweet = async () => {
+    if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    
+    try {
+      setLoadingAction("retweet");
+      const res = await fetch("/api/verify/retweet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress, tweetUrl: targetPostUrl })
+      });
+      const data = await res.json();
+      if (data.verified) {
+        setVerifiedActions(prev => ({ ...prev, retweet: true }));
+      } else {
+        alert("Retweet not verified yet. Try again.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleVerifyTweet = async () => {
+    if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    
+    try {
+      setLoadingAction("tweet");
+      const res = await fetch("/api/verify/tweet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress, requiredText })
+      });
+      const data = await res.json();
+      if (data.verified) {
+        setVerifiedActions(prev => ({ ...prev, tweet: true }));
+      } else {
+        alert("Tweet not verified yet. Try again.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -91,6 +167,17 @@ export function WLStages() {
           WL Stages
         </h2>
         <p className="text-white">Stages unlock sequentially. Pass verification before allocation.</p>
+        
+        <div className="mt-8">
+          <button 
+            disabled={xConnected || xConnecting}
+            onClick={handleConnectX}
+            className={`flex items-center gap-2 px-6 py-3 rounded-sm font-semibold tracking-wide transition-colors ${xConnected ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-black text-white hover:bg-gray-800 border border-gray-700'}`}
+          >
+            {xConnecting ? <Loader2 size={16} className="animate-spin" /> : <Twitter size={18} />}
+            {xConnected ? "X (Twitter) Connected" : "Connect X Account"}
+          </button>
+        </div>
       </div>
 
       {/* Cards Grid */}
@@ -110,20 +197,55 @@ export function WLStages() {
           </div>
           
           <p className="text-sm text-brand-primary/80 mb-8 min-h-[40px]">
-            Interact with our post to qualify. Like, retweet, and drop your wallet.
+            Follow, Retweet, and Post to qualify for your allocation.
           </p>
 
           <div className="flex-grow">
-            <Task href={targetPostUrl} verified={verifiedActions.liked} label="LIKE THE POST" placeholder="OPEN AND LIKE POST" icon={<Heart size={16} />} isInput={false} />
-            <Task href={targetPostUrl} verified={verifiedActions.retweeted} label="REPOST THE POST" placeholder="OPEN AND REPOST" icon={<RefreshCw size={16} />} isInput={false} />
-            <Task href={targetPostUrl} verified={verifiedActions.replied} label="DROP WALLET IN COMMENTS" placeholder="OPEN AND COMMENT" icon={<MessageSquare size={16} />} isInput={false} />
+            <Task 
+              href={`https://x.com/${targetAccount}`} 
+              verified={verifiedActions.follow} 
+              label="FOLLOW ACCOUNT" 
+              placeholder={`Follow @${targetAccount}`} 
+              icon={<UserCircle size={16} />} 
+              isInput={false} 
+              actionButton={
+                <button onClick={handleVerifyFollow} disabled={verifiedActions.follow || loadingAction === "follow"} className="px-4 py-3 bg-brand-bg-dark text-brand-bg-light text-sm font-bold rounded-sm whitespace-nowrap min-w-[90px] flex justify-center">
+                  {loadingAction === "follow" ? <Loader2 size={16} className="animate-spin" /> : (verifiedActions.follow ? "Done" : "Verify")}
+                </button>
+              }
+            />
+            <Task 
+              href={targetPostUrl} 
+              verified={verifiedActions.retweet} 
+              label="RETWEET ANNOUNCEMENT" 
+              placeholder="Open and Retweet" 
+              icon={<RefreshCw size={16} />} 
+              isInput={false} 
+              actionButton={
+                <button onClick={handleVerifyRetweet} disabled={verifiedActions.retweet || loadingAction === "retweet"} className="px-4 py-3 bg-brand-bg-dark text-brand-bg-light text-sm font-bold rounded-sm whitespace-nowrap min-w-[90px] flex justify-center">
+                  {loadingAction === "retweet" ? <Loader2 size={16} className="animate-spin" /> : (verifiedActions.retweet ? "Done" : "Verify")}
+                </button>
+              }
+            />
+            <Task 
+              href={`https://x.com/intent/tweet?text=${encodeURIComponent(`I'm securing my spot for ${requiredText} 🚀`)}`} 
+              verified={verifiedActions.tweet} 
+              label="POST REQUIRED TWEET" 
+              placeholder="Post tweet about us" 
+              icon={<MessageSquare size={16} />} 
+              isInput={false} 
+              actionButton={
+                <button onClick={handleVerifyTweet} disabled={verifiedActions.tweet || loadingAction === "tweet"} className="px-4 py-3 bg-brand-bg-dark text-brand-bg-light text-sm font-bold rounded-sm whitespace-nowrap min-w-[90px] flex justify-center">
+                  {loadingAction === "tweet" ? <Loader2 size={16} className="animate-spin" /> : (verifiedActions.tweet ? "Done" : "Verify")}
+                </button>
+              }
+            />
             <Task label="YOUR WALLET ADDRESS" placeholder="0x..." icon={<UserCircle size={16} />} value={walletAddress || ""} verified={!!walletAddress} />
           </div>
 
           <div className="mt-6 pt-6 border-t border-brand-border">
-            <button onClick={handleVerify} disabled={loadingAction} className="flex justify-center items-center gap-2 w-full bg-brand-primary hover:bg-brand-primary-light disabled:opacity-75 text-brand-bg-light font-semibold tracking-wide py-4 rounded-sm transition-colors text-sm">
-              {loadingAction ? <Loader2 size={16} className="animate-spin" /> : null}
-              VERIFY INTERACTIONS
+            <button disabled className="flex justify-center items-center gap-2 w-full bg-brand-primary opacity-50 cursor-not-allowed text-brand-bg-light font-semibold tracking-wide py-4 rounded-sm transition-colors text-sm">
+              CLAIM ALLOCATION
             </button>
             <p className="text-center text-xs text-brand-muted mt-4 font-mono">Open to all • FCFS allocation</p>
           </div>
@@ -147,12 +269,10 @@ export function WLStages() {
             Verified WL only. Extra points don't affect allocation.
           </p>
 
-          <div className="flex-grow relative z-20">
-            <Task href={targetPostUrl} label="POST QUOTE TWEET ABOUT LUXVAULT" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
-            <Task label="POST INVITATION (DISCORD/X)" placeholder="YOUR INVITE LINK" icon={<LinkIcon size={16} />} isInput={false} />
-            <Task label="POST EXCLUSIVE COOL ART" placeholder="Drop art link" icon={<LinkIcon size={16} />} />
-            <Task label="YOUR FCFS-APPROVED WALLET" placeholder="0x...wallet address" icon={<UserCircle size={16} />} value={walletAddress || ""} verified={!!walletAddress} />
-            <Task label="YOUR X (TWITTER) USERNAME" placeholder="@yourhandle" icon={<UserCircle size={16} />} />
+          <div className="flex-grow relative z-20 opacity-50">
+            <Task href={targetPostUrl} label="POST QUOTE TWEET" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
+            <Task label="POST INVITATION" placeholder="YOUR INVITE LINK" icon={<LinkIcon size={16} />} isInput={false} />
+            <Task label="POST EXCLUSIVE ART" placeholder="Drop art link" icon={<LinkIcon size={16} />} />
           </div>
 
           <div className="mt-6 pt-6 border-t border-brand-border relative z-20">
@@ -182,12 +302,10 @@ export function WLStages() {
             Guaranteed allocation. More activity, higher rank.
           </p>
 
-          <div className="flex-grow relative z-20">
+          <div className="flex-grow relative z-20 opacity-50">
             <Task href={targetPostUrl} label="OPEN THE POST" placeholder="OPEN THE POST" icon={<LinkIcon size={16} />} isInput={false} />
             <Task href={targetPostUrl} label="LIKE THE POST" placeholder="LIKE THE POST" icon={<Heart size={16} />} isInput={false} />
-            <Task href={targetPostUrl} label="QUOTE + RETWEET THE POST WITH CELEBRATION" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
-            <Task label="CONNECT UNDER THE POST & DROP YOUR WALLET" placeholder="0x.. WALLET ADDRESS" icon={<UserCircle size={16} />} isInput={false} />
-            <Task label="YOUR X (TWITTER) USERNAME" placeholder="@yourhandle" icon={<UserCircle size={16} />} />
+            <Task href={targetPostUrl} label="QUOTE + RETWEET" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
           </div>
 
           <div className="mt-6 pt-6 border-t border-brand-border relative z-20">
@@ -202,3 +320,4 @@ export function WLStages() {
     </section>
   );
 }
+

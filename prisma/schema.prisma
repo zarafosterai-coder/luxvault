@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model TwitterConnection {
+  id                String   @id @default(cuid())
+  userId            String   // the wallet address
+  twitterId         String
+  twitterUsername   String
+  twitterAvatar     String?
+  createdAt         DateTime @default(now())
+
+  @@unique([userId])
+}
+
+model WhitelistTask {
+  id          String    @id @default(cuid())
+  userId      String    // the wallet address
+  type        String
+  completed   Boolean   @default(false)
+  verifiedAt  DateTime?
+  metadata    String?   // JSON object as a string since sqlite json support might be finicky
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, type])
+}
