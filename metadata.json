@@ -1,0 +1,7 @@
+{
+  "name": "LuxVault WL Terminal",
+  "description": "A single-page React UI for a pixel art NFT whitelist terminal including FCFS, WL, and GTD stages, with checker and live stats.",
+
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
