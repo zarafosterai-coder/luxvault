@@ -1,6 +1,7 @@
 import { Heart, Link as LinkIcon, RefreshCw, UserCircle, MessageSquare, CheckCircle2, Loader2, ArrowRight, Twitter } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useWallet } from "./WalletContext";
+import { apiClient } from "../lib/apiClient";
 
 interface TaskProps {
   label: string;
@@ -73,9 +74,9 @@ export function WLStages() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [initialLoading, setInitialLoading] = useState(false);
   
-  const targetPostUrl = "https://x.com/LuxVaultAI/status/1855172174308425951";
-  const targetAccount = "LuxVaultAI";
-  const requiredText = "@LuxVaultAI";
+  const targetPostUrl = "https://x.com/LuxVault_/status/2054056009291980861?s=20";
+  const targetAccount = "LuxVault_";
+  const requiredText = "@LuxVault_";
 
   const saveSubmissionToBackend = async (stateToSave: typeof formState) => {
     if (!walletAddress) return;
@@ -88,24 +89,16 @@ export function WLStages() {
         gtd: stateToSave.walletAddressGTD
       });
 
-      const res = await fetch("/api/submission", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          walletAddress,
-          savedWalletAddress: serializedWallets,
-          twitterUsername: stateToSave.twitterUsername,
-          inviteLink: stateToSave.inviteLink,
-          artLink: stateToSave.artLink,
-          quoteTweetUrl: stateToSave.quoteTweetUrl,
-          commentUrl: stateToSave.commentUrl
-        })
+      const { success } = await apiClient.saveSubmission(walletAddress, {
+        savedWalletAddress: serializedWallets,
+        twitterUsername: stateToSave.twitterUsername,
+        inviteLink: stateToSave.inviteLink,
+        artLink: stateToSave.artLink,
+        quoteTweetUrl: stateToSave.quoteTweetUrl,
+        commentUrl: stateToSave.commentUrl
       });
 
-      const data = await res.json();
-      if (data.success) {
+      if (success) {
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus("idle"), 2000);
       } else {
@@ -129,6 +122,8 @@ export function WLStages() {
         quoteTweetUrl: "",
         commentUrl: ""
       });
+      setXConnected(false);
+      setVerifiedActions({ follow: false, retweet: false, tweet: false });
       return;
     }
 
@@ -136,16 +131,23 @@ export function WLStages() {
 
     const loadSubmission = async () => {
       try {
-        const res = await fetch(`/api/submission?walletAddress=${walletAddress}`);
-        const data = await res.json();
-        if (data.success && data.submission) {
-          const sub = data.submission;
-          
+        const { success, submission: sub } = await apiClient.getSubmission(walletAddress);
+        if (success && sub) {
           let fcfs = walletAddress;
           let wl = "";
           let gtd = "";
 
-          if (sub.walletAddress) {
+          if (sub.savedWalletAddress) {
+            try {
+              const parsedWallets = JSON.parse(sub.savedWalletAddress);
+              fcfs = parsedWallets.fcfs || walletAddress;
+              wl = parsedWallets.wl || "";
+              gtd = parsedWallets.gtd || "";
+            } catch (e) {
+              fcfs = sub.savedWalletAddress || walletAddress;
+            }
+          } else if (sub.walletAddress) {
+            // support standard backend naming format compatibility
             try {
               const parsedWallets = JSON.parse(sub.walletAddress);
               fcfs = parsedWallets.fcfs || walletAddress;
@@ -170,6 +172,12 @@ export function WLStages() {
           if (sub.twitterUsername) {
             setXConnected(true);
           }
+
+          setVerifiedActions({
+            follow: !!sub.verifiedFollow,
+            retweet: !!sub.verifiedRetweet,
+            tweet: !!sub.verifiedTweet
+          });
         } else {
           setFormState(prev => ({
             ...prev,
@@ -207,14 +215,17 @@ export function WLStages() {
     
     try {
       setXConnecting(true);
-      const res = await fetch("/api/campaigns/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress })
-      });
-      const data = await res.json();
+      const data = await apiClient.connectX(walletAddress);
       if (data.connected) {
         setXConnected(true);
+        // Prompt username fill locally
+        setFormState(prev => {
+          const updated = { ...prev };
+          if (!updated.twitterUsername) {
+            updated.twitterUsername = "@lux_user";
+          }
+          return updated;
+        });
       } else {
         alert("Failed to connect X.");
       }
@@ -230,12 +241,7 @@ export function WLStages() {
     
     try {
       setLoadingAction("follow");
-      const res = await fetch("/api/verify/follow", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress, targetAccount })
-      });
-      const data = await res.json();
+      const data = await apiClient.verifyFollow(walletAddress, targetAccount);
       if (data.verified) {
         setVerifiedActions(prev => ({ ...prev, follow: true }));
       } else {
@@ -253,12 +259,7 @@ export function WLStages() {
     
     try {
       setLoadingAction("retweet");
-      const res = await fetch("/api/verify/retweet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress, tweetUrl: targetPostUrl })
-      });
-      const data = await res.json();
+      const data = await apiClient.verifyRetweet(walletAddress, targetPostUrl);
       if (data.verified) {
         setVerifiedActions(prev => ({ ...prev, retweet: true }));
       } else {
@@ -276,12 +277,7 @@ export function WLStages() {
     
     try {
       setLoadingAction("tweet");
-      const res = await fetch("/api/verify/tweet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress, requiredText })
-      });
-      const data = await res.json();
+      const data = await apiClient.verifyTweet(walletAddress, requiredText);
       if (data.verified) {
         setVerifiedActions(prev => ({ ...prev, tweet: true }));
       } else {
@@ -370,7 +366,7 @@ export function WLStages() {
               }
             />
             <Task 
-              href={`https://x.com/intent/tweet?text=${encodeURIComponent(`I'm securing my spot for ${requiredText} 🚀`)}`} 
+              href={`https://x.com/intent/tweet?text=${encodeURIComponent(`I'm securing my spot for ${requiredText} 🚀 ${targetPostUrl}`)}`} 
               verified={verifiedActions.tweet} 
               label="POST REQUIRED TWEET" 
               placeholder="Post tweet about us" 

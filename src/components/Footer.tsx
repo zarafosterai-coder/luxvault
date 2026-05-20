@@ -24,9 +24,9 @@ export function Footer() {
           </div>
 
           {/* Center Message */}
-          <div className="flex justify-center text-center">
-            <p className="text-xs font-mono tracking-widest text-brand-accent uppercase">
-              PIXEL ALLOCATION IS ETERNAL
+          <div className="flex justify-center text-center max-w-sm mx-auto">
+            <p className="text-xs font-mono text-brand-accent leading-relaxed">
+              This is a test collection that will grant you entry to our onchain raffle where you can win prizes. Total prize pool value $15,000
             </p>
           </div>
 
