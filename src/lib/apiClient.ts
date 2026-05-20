@@ -186,5 +186,34 @@ export const apiClient = {
       saveLocalSubmission(walletAddress, { verifiedTweet: true });
       return { verified: true };
     }
+  },
+
+  // Get all submissions for Admin Sheet exports
+  async getAllSubmissions(): Promise<{ success: boolean; submissions: WLSubmission[] }> {
+    try {
+      const res = await fetch("/api/admin/submissions");
+      const data = await parseJsonResponse(res);
+      if (data.success) {
+        return { success: true, submissions: data.submissions };
+      }
+      throw new Error(data.error || "Failed load admin list");
+    } catch (err) {
+      console.warn("Admin list load via API failed, searching local storage keys:", err);
+      const submissionsList: WLSubmission[] = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("luxvault_v1_sub_")) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              submissionsList.push(JSON.parse(raw));
+            }
+          }
+        }
+      } catch (localError) {
+        console.error("Failed to query local storage", localError);
+      }
+      return { success: true, submissions: submissionsList };
+    }
   }
 };

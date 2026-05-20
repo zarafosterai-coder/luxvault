@@ -52,6 +52,18 @@ async function startServer() {
     }
   });
 
+  app.get("/api/admin/submissions", async (req, res) => {
+    try {
+      const submissions = await prisma.userSubmission.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+      res.json({ success: true, submissions });
+    } catch (error: any) {
+      console.error("GET /api/admin/submissions error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const postSubmissionSchema = z.object({
     walletAddress: z.string().min(1, "Wallet address is required"),
     savedWalletAddress: z.string().nullable().optional(),
