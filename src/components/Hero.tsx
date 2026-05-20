@@ -19,7 +19,7 @@ export function Hero() {
           </h1>
           
           <p className="text-lg md:text-xl text-brand-primary/80 max-w-md">
-            1111 pixel unicorns. Free mint.
+            1111 LuxVault WL. Free mint.
           </p>
 
           <button className="mt-4 bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-8 py-4 rounded-sm flex items-center gap-3 font-medium tracking-wide transition-all group">
@@ -63,7 +63,7 @@ export function Hero() {
               </div>
               <div>
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Type</p>
-                <p className="font-semibold text-brand-primary">Pixel Unicorn</p>
+                <p className="font-semibold text-brand-primary">LuxVault WL</p>
               </div>
               <div>
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Total Supply</p>

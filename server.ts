@@ -46,7 +46,11 @@ async function startServer() {
       
       // Attempt generic action to verify connection health
       try {
-        await composio.executeAction(connection.id, "TWITTER_USER_ME", {}); 
+        await entity.execute({
+          actionName: "twitter_user_me",
+          params: {},
+          connectedAccountId: connection.id
+        });
       } catch (e) {
         console.log("Connection check error:", e);
       }

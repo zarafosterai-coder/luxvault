@@ -23,7 +23,7 @@ export function WLChecker() {
               placeholder="0x... wallet address"
               className="flex-grow px-4 py-4 border border-brand-border rounded-sm bg-brand-bg-light/30 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors text-sm font-mono"
             />
-            <button className="bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-8 py-4 rounded-sm font-medium tracking-wide transition-colors whitespace-nowrap">
+            <button className="bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-8 py-4 rounded-sm font-medium tracking-wide transition-colors whitespace-nowrap w-[150px] text-[11px]">
               CHECK STATUS
             </button>
           </div>

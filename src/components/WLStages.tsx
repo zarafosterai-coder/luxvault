@@ -62,7 +62,9 @@ export function WLStages() {
         body: JSON.stringify({ walletAddress: "0x123...456" }) // mock
       });
       const data = await res.json();
-      if (data.redirectUrl) {
+      if (res.status === 500 && data.error) {
+        alert("Server Error: " + data.error);
+      } else if (data.redirectUrl) {
         window.open(data.redirectUrl, "_blank", "width=600,height=800");
         // For simulation, set connected after a short timeout assuming user completed
         setTimeout(() => setIsConnected(true), 5000);
@@ -90,7 +92,9 @@ export function WLStages() {
         body: JSON.stringify({ walletAddress: "0x123...456" })
       });
       const data = await res.json();
-      if (data.needsConnection) {
+      if (res.status === 500 && data.error) {
+        alert("Server Error: " + data.error);
+      } else if (data.needsConnection) {
         setIsConnected(false);
         alert("Not connected to X. Please connect.");
       } else if (data.success) {
@@ -104,21 +108,21 @@ export function WLStages() {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-white border-y border-brand-border/60">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-brand-bg-dark text-brand-bg-light border-y border-brand-border/60">
       
       {/* Section Header */}
       <div className="mb-12">
         <p className="text-xs font-mono tracking-widest text-brand-accent uppercase mb-3">// WHITELIST ALLOCATION</p>
-        <h2 className="text-4xl md:text-5xl font-serif text-brand-primary font-bold tracking-tight mb-4 text-brand-primary">
+        <h2 className="text-4xl md:text-5xl font-serif text-brand-primary font-bold tracking-tight mb-4 text-white">
           WL Stages
         </h2>
-        <p className="text-brand-primary/70">Stages unlock sequentially. Pass verification before allocation.</p>
+        <p className="text-white">Stages unlock sequentially. Pass verification before allocation.</p>
         
         <div className="mt-6 flex flex-col md:flex-row gap-4 items-center">
           <button 
             onClick={isConnected ? () => {} : handleConnectTwitter}
             disabled={isConnected || connectLoading}
-            className={`px-6 py-2 rounded-sm text-sm font-bold tracking-wide transition-colors flex items-center gap-2 ${isConnected ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-[#1DA1F2] text-white hover:bg-blue-500'}`}
+            className={`px-6 py-2 rounded-sm text-sm font-bold tracking-wide transition-colors flex items-center gap-2 ${isConnected ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-brand-accent text-[#1d2019] hover:bg-brand-accent-hover'}`}
           >
             {connectLoading ? <Loader2 size={16} className="animate-spin" /> : <UserCircle size={16} />}
             {isConnected ? "X (Twitter) Connected" : "Connect X Account"}
@@ -130,7 +134,7 @@ export function WLStages() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* FCFS Card */}
-        <div className="bg-brand-bg-light border border-brand-border rounded-xl p-6 md:p-8 flex flex-col">
+        <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 flex flex-col">
           <div className="flex justify-between items-start mb-6">
              <div className="flex items-baseline gap-3">
                <span className="text-2xl font-serif text-brand-accent font-bold">01</span>

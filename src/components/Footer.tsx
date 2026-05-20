@@ -14,7 +14,7 @@ export function Footer() {
               <span className="font-bold text-xl tracking-widest uppercase">LuxVault</span>
             </div>
             <p className="text-sm font-mono text-brand-bg-light/60">
-              1111 pixel unicorns. Free mint.
+              1111 LuxVault WL. Free mint.
             </p>
             <p className="text-xs font-mono text-brand-bg-light/40 mt-2">
               © LuxVault. All Rights Reserved.

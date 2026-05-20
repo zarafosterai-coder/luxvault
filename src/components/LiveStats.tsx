@@ -24,7 +24,7 @@ export function LiveStats() {
     {
       title: "TOTAL SUPPLY",
       value: "1111",
-      subtext: "Pixel Unicorns",
+      subtext: "LuxVault WL",
       active: false
     }
   ];
