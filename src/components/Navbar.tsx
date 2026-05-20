@@ -7,7 +7,7 @@ export function Navbar() {
   const { walletAddress, connectWallet, loading } = useWallet();
 
   return (
-    <nav className="w-full border-b border-brand-border bg-brand-bg-light sticky top-0 z-50">
+    <nav className="w-full border-b border-brand-border bg-brand-bg-light/75 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           
@@ -59,7 +59,7 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-brand-bg-light border-b border-brand-border">
+        <div className="md:hidden bg-brand-bg-light/90 backdrop-blur-md border-b border-brand-border animate-in fade-in slide-in-from-top-4 duration-200">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 flex flex-col gap-4">
             <a href="#" className="block px-3 py-2 text-base font-semibold text-brand-primary">WL STAGES</a>
             <a href="#" className="block px-3 py-2 text-base font-medium text-brand-muted">CHECK</a>
