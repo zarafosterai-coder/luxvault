@@ -10,7 +10,7 @@ export function Hero() {
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-brand-border rounded-full text-xs font-mono text-brand-accent font-medium tracking-wide">
             <span>GENESIS DROP</span>
             <span className="w-1 h-1 rounded-full bg-brand-primary-light/30"></span>
-            <span>BY @LILHUBCAT</span>
+            <span>BY @LuxVault_</span>
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold text-brand-accent tracking-tighter leading-[1.1]">
@@ -22,8 +22,11 @@ export function Hero() {
             1111 LuxVault WL. Free mint.
           </p>
 
-          <button className="mt-4 bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-8 py-4 rounded-sm flex items-center gap-3 font-medium tracking-wide transition-all group">
-            CLAIM YOUR PIXEL WL
+          <button 
+            onClick={() => document.getElementById("wl-stages")?.scrollIntoView({ behavior: "smooth" })}
+            className="mt-4 bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-8 py-4 rounded-sm flex items-center gap-3 font-medium tracking-wide transition-all group"
+          >
+            CLAIM TEST DROP WL
             <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
           </button>
 

@@ -291,7 +291,7 @@ export function WLStages() {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-brand-bg-dark text-brand-bg-light border-y border-brand-border/60">
+    <section id="wl-stages" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-brand-bg-dark text-brand-bg-light border-y border-brand-border/60">
       
       {/* Section Header */}
       <div className="mb-12">
