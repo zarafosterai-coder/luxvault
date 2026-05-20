@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { verifyFollowScrape, verifyRetweetScrape, verifyTweetScrape } from "./src/lib/playwright/index.js";
+import { getSubmission, saveSubmission } from "./src/lib/submission/index.js";
 
 dotenv.config();
 
@@ -32,6 +33,67 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  const getSubmissionSchema = z.object({
+    walletAddress: z.string().min(1, "Wallet address is required"),
+  });
+
+  app.get("/api/submission", async (req, res) => {
+    try {
+      const parsed = getSubmissionSchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0].message });
+      }
+      const { walletAddress } = parsed.data;
+      const submission = await getSubmission(walletAddress);
+      res.json({ success: true, submission });
+    } catch (error: any) {
+      console.error("GET /api/submission error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  const postSubmissionSchema = z.object({
+    walletAddress: z.string().min(1, "Wallet address is required"),
+    savedWalletAddress: z.string().nullable().optional(),
+    twitterUsername: z.string().nullable().optional(),
+    inviteLink: z.string().nullable().optional(),
+    artLink: z.string().nullable().optional(),
+    quoteTweetUrl: z.string().nullable().optional(),
+    commentUrl: z.string().nullable().optional(),
+  });
+
+  app.post("/api/submission", async (req, res) => {
+    try {
+      const parsed = postSubmissionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0].message });
+      }
+      const { 
+        walletAddress, 
+        savedWalletAddress, 
+        twitterUsername, 
+        inviteLink, 
+        artLink, 
+        quoteTweetUrl, 
+        commentUrl 
+      } = parsed.data;
+
+      const submission = await saveSubmission(walletAddress, {
+        walletAddress: savedWalletAddress,
+        twitterUsername,
+        inviteLink,
+        artLink,
+        quoteTweetUrl,
+        commentUrl
+      });
+      
+      res.json({ success: true, submission });
+    } catch (error: any) {
+      console.error("POST /api/submission error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const connectSchema = z.object({
     walletAddress: z.string().min(1, "Wallet address is required"),
   });
@@ -40,7 +102,7 @@ async function startServer() {
     try {
       const parsed = connectSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.errors[0].message });
+        return res.status(400).json({ error: parsed.error.issues[0].message });
       }
       const { walletAddress } = parsed.data;
 

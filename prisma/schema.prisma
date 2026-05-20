@@ -31,3 +31,16 @@ model WhitelistTask {
 
   @@unique([userId, type])
 }
+
+model UserSubmission {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  walletAddress     String?
+  twitterUsername   String?
+  inviteLink        String?
+  artLink           String?
+  quoteTweetUrl     String?
+  commentUrl        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
