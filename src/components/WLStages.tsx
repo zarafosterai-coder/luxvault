@@ -1,5 +1,6 @@
 import { Heart, Link as LinkIcon, RefreshCw, UserCircle, MessageSquare, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useWallet } from "./WalletContext";
 
 interface TaskProps {
   label: string;
@@ -47,40 +48,14 @@ const Task = ({ label, placeholder, icon, isInput = true, value, onClick, verifi
 );
 
 export function WLStages() {
+  const { walletAddress } = useWallet();
   const [loadingAction, setLoadingAction] = useState(false);
-  const [connectLoading, setConnectLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [verifiedActions, setVerifiedActions] = useState({ liked: false, retweeted: false, replied: false });
   const targetPostUrl = "https://x.com/LuxVaultAI/status/1855172174308425951";
 
-  const handleConnectTwitter = async () => {
-    try {
-      setConnectLoading(true);
-      const res = await fetch("/api/campaigns/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: "0x123...456" }) // mock
-      });
-      const data = await res.json();
-      if (res.status === 500 && data.error) {
-        alert("Server Error: " + data.error);
-      } else if (data.redirectUrl) {
-        window.open(data.redirectUrl, "_blank", "width=600,height=800");
-        // For simulation, set connected after a short timeout assuming user completed
-        setTimeout(() => setIsConnected(true), 5000);
-      } else if (data.connected) {
-        setIsConnected(true);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setConnectLoading(false);
-    }
-  };
-
   const handleVerify = async () => {
-    if (!isConnected) {
-      alert("Please connect your X (Twitter) account first.");
+    if (!walletAddress) {
+      alert("Please connect your wallet first.");
       return;
     }
     
@@ -89,13 +64,12 @@ export function WLStages() {
       const res = await fetch("/api/campaigns/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: "0x123...456" })
+        body: JSON.stringify({ walletAddress })
       });
       const data = await res.json();
       if (res.status === 500 && data.error) {
         alert("Server Error: " + data.error);
       } else if (data.needsConnection) {
-        setIsConnected(false);
         alert("Not connected to X. Please connect.");
       } else if (data.success) {
         setVerifiedActions(data.verified);
@@ -117,17 +91,6 @@ export function WLStages() {
           WL Stages
         </h2>
         <p className="text-white">Stages unlock sequentially. Pass verification before allocation.</p>
-        
-        <div className="mt-6 flex flex-col md:flex-row gap-4 items-center">
-          <button 
-            onClick={isConnected ? () => {} : handleConnectTwitter}
-            disabled={isConnected || connectLoading}
-            className={`px-6 py-2 rounded-sm text-sm font-bold tracking-wide transition-colors flex items-center gap-2 ${isConnected ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-brand-accent text-[#1d2019] hover:bg-brand-accent-hover'}`}
-          >
-            {connectLoading ? <Loader2 size={16} className="animate-spin" /> : <UserCircle size={16} />}
-            {isConnected ? "X (Twitter) Connected" : "Connect X Account"}
-          </button>
-        </div>
       </div>
 
       {/* Cards Grid */}
@@ -154,7 +117,7 @@ export function WLStages() {
             <Task href={targetPostUrl} verified={verifiedActions.liked} label="LIKE THE POST" placeholder="OPEN AND LIKE POST" icon={<Heart size={16} />} isInput={false} />
             <Task href={targetPostUrl} verified={verifiedActions.retweeted} label="REPOST THE POST" placeholder="OPEN AND REPOST" icon={<RefreshCw size={16} />} isInput={false} />
             <Task href={targetPostUrl} verified={verifiedActions.replied} label="DROP WALLET IN COMMENTS" placeholder="OPEN AND COMMENT" icon={<MessageSquare size={16} />} isInput={false} />
-            <Task label="YOUR WALLET ADDRESS" placeholder="0x..." icon={<UserCircle size={16} />} value="0x123...456" verified={isConnected} />
+            <Task label="YOUR WALLET ADDRESS" placeholder="0x..." icon={<UserCircle size={16} />} value={walletAddress || ""} verified={!!walletAddress} />
           </div>
 
           <div className="mt-6 pt-6 border-t border-brand-border">
@@ -185,10 +148,10 @@ export function WLStages() {
           </p>
 
           <div className="flex-grow relative z-20">
-            <Task label="POST QUOTE TWEET ABOUT LUXVAULT" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
+            <Task href={targetPostUrl} label="POST QUOTE TWEET ABOUT LUXVAULT" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
             <Task label="POST INVITATION (DISCORD/X)" placeholder="YOUR INVITE LINK" icon={<LinkIcon size={16} />} isInput={false} />
             <Task label="POST EXCLUSIVE COOL ART" placeholder="Drop art link" icon={<LinkIcon size={16} />} />
-            <Task label="YOUR FCFS-APPROVED WALLET" placeholder="0x...wallet address" icon={<UserCircle size={16} />} />
+            <Task label="YOUR FCFS-APPROVED WALLET" placeholder="0x...wallet address" icon={<UserCircle size={16} />} value={walletAddress || ""} verified={!!walletAddress} />
             <Task label="YOUR X (TWITTER) USERNAME" placeholder="@yourhandle" icon={<UserCircle size={16} />} />
           </div>
 
@@ -220,9 +183,9 @@ export function WLStages() {
           </p>
 
           <div className="flex-grow relative z-20">
-            <Task label="OPEN THE POST" placeholder="OPEN THE POST" icon={<LinkIcon size={16} />} isInput={false} />
-            <Task label="LIKE THE POST" placeholder="LIKE THE POST" icon={<Heart size={16} />} isInput={false} />
-            <Task label="QUOTE + RETWEET THE POST WITH CELEBRATION" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
+            <Task href={targetPostUrl} label="OPEN THE POST" placeholder="OPEN THE POST" icon={<LinkIcon size={16} />} isInput={false} />
+            <Task href={targetPostUrl} label="LIKE THE POST" placeholder="LIKE THE POST" icon={<Heart size={16} />} isInput={false} />
+            <Task href={targetPostUrl} label="QUOTE + RETWEET THE POST WITH CELEBRATION" placeholder="QUOTE TWEET" icon={<MessageSquare size={16} />} isInput={false} />
             <Task label="CONNECT UNDER THE POST & DROP YOUR WALLET" placeholder="0x.. WALLET ADDRESS" icon={<UserCircle size={16} />} isInput={false} />
             <Task label="YOUR X (TWITTER) USERNAME" placeholder="@yourhandle" icon={<UserCircle size={16} />} />
           </div>

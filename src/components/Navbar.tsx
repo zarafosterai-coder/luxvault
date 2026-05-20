@@ -1,8 +1,10 @@
-import { Key, Menu, X } from "lucide-react";
+import { Key, Menu, X, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useWallet } from "./WalletContext";
 
 export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { walletAddress, connectWallet, loading } = useWallet();
 
   return (
     <nav className="w-full border-b border-brand-border bg-brand-bg-light sticky top-0 z-50">
@@ -33,11 +35,12 @@ export function Navbar() {
           {/* Connect Button (Desktop) */}
           <div className="hidden md:block">
             <button 
-              onClick={() => console.log("Connect Wallet Triggered")}
-              className="flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-brand-bg-light px-6 py-2.5 rounded-sm font-medium transition-colors border border-transparent"
+              disabled={loading}
+              onClick={walletAddress ? undefined : connectWallet}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-sm font-medium transition-colors border ${walletAddress ? 'bg-brand-bg-light text-brand-primary border-brand-border cursor-default' : 'bg-brand-accent hover:bg-brand-accent-hover text-brand-bg-light border-transparent'}`}
             >
-              <Key size={16} />
-              CONNECT WALLET
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
+              {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'CONNECT WALLET'}
             </button>
           </div>
 
@@ -63,11 +66,12 @@ export function Navbar() {
             <a href="#" className="block px-3 py-2 text-base font-medium text-brand-muted">PREVIEW</a>
             <a href="#" className="block px-3 py-2 text-base font-medium text-brand-muted">DOCS</a>
             <button 
-              onClick={() => { console.log("Connect Wallet Triggered"); setIsMobileMenuOpen(false); }}
-              className="flex items-center justify-center gap-2 w-full bg-brand-accent text-brand-bg-light px-6 py-3 rounded-sm font-medium"
+              disabled={loading}
+              onClick={() => { if (!walletAddress) connectWallet(); setIsMobileMenuOpen(false); }}
+              className={`flex items-center justify-center gap-2 w-full px-6 py-3 rounded-sm font-medium ${walletAddress ? 'bg-brand-bg-light text-brand-primary border border-brand-border cursor-default' : 'bg-brand-accent text-brand-bg-light'}`}
             >
-              <Key size={16} />
-              CONNECT WALLET
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
+              {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'CONNECT WALLET'}
             </button>
           </div>
         </div>

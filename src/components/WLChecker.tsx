@@ -1,4 +1,7 @@
+import { useWallet } from "./WalletContext";
+
 export function WLChecker() {
+  const { walletAddress } = useWallet();
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -20,6 +23,8 @@ export function WLChecker() {
           <div className="flex flex-col sm:flex-row gap-4">
             <input 
               type="text" 
+              defaultValue={walletAddress || ""}
+              key={walletAddress || "empty"}
               placeholder="0x... wallet address"
               className="flex-grow px-4 py-4 border border-brand-border rounded-sm bg-brand-bg-light/30 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors text-sm font-mono"
             />

@@ -1,6 +1,8 @@
-import { Key } from "lucide-react";
+import { Key, Loader2 } from "lucide-react";
+import { useWallet } from "./WalletContext";
 
 export function Footer() {
+  const { walletAddress, connectWallet, loading } = useWallet();
   return (
     <footer className="w-full bg-brand-bg-dark border-t border-brand-bg-light/10 text-brand-bg-light py-12 relative overflow-hidden">
       <div className="absolute inset-0 bg-noise mix-blend-overlay opacity-30 pointer-events-none"></div>
@@ -31,11 +33,12 @@ export function Footer() {
           {/* Right Actions */}
           <div className="flex flex-col items-start md:items-end gap-6">
             <button 
-              onClick={() => console.log("Connect Wallet Triggered")}
-              className="flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-brand-bg-light px-8 py-3 rounded-sm font-medium transition-colors border border-transparent"
+              disabled={loading}
+              onClick={walletAddress ? undefined : connectWallet}
+              className={`flex items-center gap-2 px-8 py-3 rounded-sm font-medium transition-colors border ${walletAddress ? 'bg-brand-bg-light/10 text-brand-bg-light border-brand-border cursor-default' : 'bg-brand-accent hover:bg-brand-accent-hover text-brand-bg-light border-transparent'}`}
             >
-              <Key size={16} />
-              CONNECT WALLET
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
+              {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'CONNECT WALLET'}
             </button>
 
             <div className="flex items-center gap-6">

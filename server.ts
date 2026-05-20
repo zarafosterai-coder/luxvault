@@ -96,6 +96,12 @@ async function startServer() {
     }
   });
 
+  app.post("/api/wallet/connect", (req, res) => {
+    // Generate a mock wallet address
+    const mockAddress = "0x" + Math.random().toString(16).slice(2, 42).padEnd(40, "0");
+    res.json({ success: true, walletAddress: mockAddress });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

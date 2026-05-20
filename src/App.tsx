@@ -10,20 +10,23 @@ import { WLChecker } from './components/WLChecker';
 import { LiveStats } from './components/LiveStats';
 import { PreviewSection } from './components/PreviewSection';
 import { Footer } from './components/Footer';
+import { WalletProvider } from './components/WalletContext';
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-brand-bg-light">
-      <Navbar />
-      <main className="flex-grow">
-        <Hero />
-        <WLStages />
-        <WLChecker />
-        <LiveStats />
-        <PreviewSection />
-      </main>
-      <Footer />
-    </div>
+    <WalletProvider>
+      <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-brand-bg-light">
+        <Navbar />
+        <main className="flex-grow">
+          <Hero />
+          <WLStages />
+          <WLChecker />
+          <LiveStats />
+          <PreviewSection />
+        </main>
+        <Footer />
+      </div>
+    </WalletProvider>
   );
 }
 
