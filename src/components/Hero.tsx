@@ -55,21 +55,6 @@ export function Hero() {
               </div>
             </div>
 
-            {/* Placeholder Art container */}
-            <div className="aspect-square w-full bg-brand-bg-dark rounded-md relative flex items-center justify-center p-8">
-              {/* Very basic pixel unicorn approximation with CSS blocks for demo purposes - usually this would be an img */}
-              <div className="w-full h-full relative" style={{ imageRendering: 'pixelated' }}>
-                 {/* This just creates a rough shape to imply pixel art using divs */}
-                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 grid grid-cols-8 grid-rows-8 gap-0 opacity-80">
-                     {Array.from({length: 64}).map((_, i) => {
-                       // Pattern to roughly look like a horse head
-                       const isActive = [3,4,11,12,13,18,19,20,21,25,26,27,28,29,33,34,35,36,41,42,43,50,51].includes(i);
-                       return <div key={i} className={isActive ? 'bg-brand-accent' : 'bg-transparent'}></div>
-                     })}
-                 </div>
-              </div>
-            </div>
-
             {/* Card Stats Grid */}
             <div className="grid grid-cols-2 gap-4 gap-y-6">
               <div>

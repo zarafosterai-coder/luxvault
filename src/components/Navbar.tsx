@@ -11,15 +11,6 @@ export function Navbar() {
           
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center gap-3">
-            {/* Simple CSS block logo to mimic pixel art */ }
-            <div className="w-8 h-8 bg-brand-accent flex items-center justify-center rounded-sm">
-              <div className="w-4 h-4 bg-brand-bg-light grid grid-cols-2 grid-rows-2 gap-[1px]">
-                <div className="bg-brand-accent"></div>
-                <div className="bg-brand-primary"></div>
-                <div className="bg-brand-primary"></div>
-                <div className="bg-brand-accent"></div>
-              </div>
-            </div>
             <span className="font-bold text-xl tracking-widest text-brand-primary uppercase">LuxVault</span>
           </div>
 

@@ -11,14 +11,6 @@ export function Footer() {
           {/* Logo & Copyright */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-brand-accent flex items-center justify-center rounded-sm">
-                <div className="w-4 h-4 bg-brand-bg-light grid grid-cols-2 grid-rows-2 gap-[1px]">
-                  <div className="bg-brand-accent"></div>
-                  <div className="bg-brand-primary"></div>
-                  <div className="bg-brand-primary"></div>
-                  <div className="bg-brand-accent"></div>
-                </div>
-              </div>
               <span className="font-bold text-xl tracking-widest uppercase">LuxVault</span>
             </div>
             <p className="text-sm font-mono text-brand-bg-light/60">

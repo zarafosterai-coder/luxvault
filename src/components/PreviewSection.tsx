@@ -53,18 +53,6 @@ export function PreviewSection() {
                 Coming Soon
               </div>
 
-              {/* Pixel Art Ghost / Silhouette */}
-              <div className="w-48 h-48 opacity-10 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" style={{ imageRendering: 'pixelated' }}>
-                 <div className="w-full h-full relative">
-                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 grid grid-cols-8 grid-rows-8 gap-0">
-                         {Array.from({length: 64}).map((_, i) => {
-                           const isActive = [3,4,11,12,13,18,19,20,21,25,26,27,28,29,33,34,35,36,41,42,43,50,51].includes(i);
-                           return <div key={i} className={isActive ? 'bg-brand-bg-light' : 'bg-transparent'}></div>
-                         })}
-                     </div>
-                 </div>
-              </div>
-
               {/* Center Lock Message */}
               <div className="relative z-10 flex flex-col items-center gap-4">
                 <div className="w-12 h-12 rounded-full border border-brand-bg-light/20 flex flex-col items-center justify-center bg-brand-bg-dark">
