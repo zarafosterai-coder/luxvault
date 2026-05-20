@@ -58,6 +58,7 @@ export function WLStages() {
   const { walletAddress } = useWallet();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [verifiedActions, setVerifiedActions] = useState({ follow: false, retweet: false, tweet: false });
+  const [clickedActions, setClickedActions] = useState({ follow: false, retweet: false, tweet: false });
   const [xConnected, setXConnected] = useState(false);
   const [xConnecting, setXConnecting] = useState(false);
 
@@ -238,6 +239,10 @@ export function WLStages() {
 
   const handleVerifyFollow = async () => {
     if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    if (!clickedActions.follow) {
+      alert(`Please click/open the "Follow @${targetAccount}" link first to initiate follow redirection!`);
+      return;
+    }
     
     try {
       setLoadingAction("follow");
@@ -256,6 +261,10 @@ export function WLStages() {
 
   const handleVerifyRetweet = async () => {
     if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    if (!clickedActions.retweet) {
+      alert('Please click/open the "Open and Retweet" link first to visit the tweet!');
+      return;
+    }
     
     try {
       setLoadingAction("retweet");
@@ -274,6 +283,10 @@ export function WLStages() {
 
   const handleVerifyTweet = async () => {
     if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    if (!clickedActions.tweet) {
+      alert('Please click/open the "Post tweet about us" link first to compose the tweet!');
+      return;
+    }
     
     try {
       setLoadingAction("tweet");
@@ -346,6 +359,7 @@ export function WLStages() {
               placeholder={`Follow @${targetAccount}`} 
               icon={<UserCircle size={16} />} 
               isInput={false} 
+              onClick={() => setClickedActions(prev => ({ ...prev, follow: true }))}
               actionButton={
                 <button onClick={handleVerifyFollow} disabled={verifiedActions.follow || loadingAction === "follow"} className="px-4 py-3 bg-brand-bg-dark text-brand-bg-light text-sm font-bold rounded-sm whitespace-nowrap min-w-[90px] flex justify-center">
                   {loadingAction === "follow" ? <Loader2 size={16} className="animate-spin" /> : (verifiedActions.follow ? "Done" : "Verify")}
@@ -359,6 +373,7 @@ export function WLStages() {
               placeholder="Open and Retweet" 
               icon={<RefreshCw size={16} />} 
               isInput={false} 
+              onClick={() => setClickedActions(prev => ({ ...prev, retweet: true }))}
               actionButton={
                 <button onClick={handleVerifyRetweet} disabled={verifiedActions.retweet || loadingAction === "retweet"} className="px-4 py-3 bg-brand-bg-dark text-brand-bg-light text-sm font-bold rounded-sm whitespace-nowrap min-w-[90px] flex justify-center">
                   {loadingAction === "retweet" ? <Loader2 size={16} className="animate-spin" /> : (verifiedActions.retweet ? "Done" : "Verify")}
@@ -372,6 +387,7 @@ export function WLStages() {
               placeholder="Post tweet about us" 
               icon={<MessageSquare size={16} />} 
               isInput={false} 
+              onClick={() => setClickedActions(prev => ({ ...prev, tweet: true }))}
               actionButton={
                 <button onClick={handleVerifyTweet} disabled={verifiedActions.tweet || loadingAction === "tweet"} className="px-4 py-3 bg-brand-bg-dark text-brand-bg-light text-sm font-bold rounded-sm whitespace-nowrap min-w-[90px] flex justify-center">
                   {loadingAction === "tweet" ? <Loader2 size={16} className="animate-spin" /> : (verifiedActions.tweet ? "Done" : "Verify")}
