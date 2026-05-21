@@ -1,34 +1,94 @@
 import { ArrowRight } from "lucide-react";
-import { useState, useEffect } from "react";
-import { apiClient } from "../lib/apiClient";
 
-export function Hero() {
-  const [config, setConfig] = useState({
-    targetAccount: "LuxVault_",
-    targetPostUrl: "",
-    totalSupply: "1111",
-    mintPrice: "Free Mint"
-  });
+interface HeroProps {
+  data?: {
+    tagline?: string;
+    title?: string;
+    subtitle?: string;
+    buttonText?: string;
+    buttonSize?: 'sm' | 'md' | 'lg';
+    buttonEffect?: 'solid' | 'gradient' | 'outline';
+    buttonHref?: string;
+    stats?: Array<{ label: string; value: string }>;
+    columnLayout?: 'one-col' | 'two-col';
+  };
+}
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await apiClient.getCampaignConfig();
-        if (data) {
-          setConfig({
-            targetAccount: data.targetAccount || "LuxVault_",
-            targetPostUrl: data.targetPostUrl || "",
-            totalSupply: data.totalSupply || "1111",
-            mintPrice: data.mintPrice || "Free Mint"
-          });
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    load();
-  }, []);
+export function Hero({ data }: HeroProps) {
+  const tagline = data?.tagline || "GENESIS DROP BY @LuxVault_";
+  const title = data?.title || "THE SIGNAL SECURED SYSTEM";
+  const subtitle = data?.subtitle || "1111 LuxVault WL. Free mint.";
+  const buttonText = data?.buttonText || "CLAIM TEST DROP WL";
+  const buttonSize = data?.buttonSize || "lg";
+  const buttonEffect = data?.buttonEffect || "solid";
+  const buttonHref = data?.buttonHref || "#stages";
+  const stats = data?.stats || [
+    { "label": "Total Supply", "value": "1111" },
+    { "label": "Mint Price", "value": "Free Mint" }
+  ];
+  const columnLayout = data?.columnLayout || "two-col";
 
+  // Size Tailwind mapping
+  const sizeClasses = {
+    sm: "px-5 py-2.5 text-xs",
+    md: "px-6 py-3 text-sm",
+    lg: "px-8 py-4 text-base"
+  }[buttonSize] || "px-8 py-4 text-sm";
+
+  // Effect Tailwind mapping
+  const effectClasses = {
+    solid: "bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light border-transparent",
+    gradient: "bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-black font-semibold border-transparent",
+    outline: "bg-transparent hover:bg-brand-primary/5 text-brand-primary border-brand-primary/50 hover:border-brand-primary"
+  }[buttonEffect] || "bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light border-transparent";
+
+  const handleButtonClick = () => {
+    const id = buttonHref.startsWith("#") ? buttonHref.slice(1) : buttonHref;
+    const element = document.getElementById(id || "stages");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    } else {
+      // Treat as relative link
+      window.location.hash = buttonHref;
+    }
+  };
+
+  if (columnLayout === "one-col") {
+    return (
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex flex-col items-center justify-center gap-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-brand-border rounded-full text-xs font-mono text-brand-accent font-medium tracking-wide">
+          <span>{tagline}</span>
+        </div>
+
+        <h1 className="text-5xl md:text-7xl font-bold text-brand-accent tracking-tighter leading-[1.1] max-w-3xl">
+          <span className="block text-brand-primary font-serif">{title}</span>
+        </h1>
+        
+        <p className="text-lg md:text-xl text-brand-primary/80 max-w-2xl leading-relaxed">
+          {subtitle}
+        </p>
+
+        <button 
+          onClick={handleButtonClick}
+          className={`${sizeClasses} ${effectClasses} rounded-sm flex items-center justify-center gap-3 font-medium tracking-wide transition-all group border`}
+        >
+          {buttonText}
+          <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+
+        <div className="mt-8 flex items-center justify-center gap-12 font-mono text-sm border-t border-brand-border pt-6 w-full max-w-md">
+          {stats.map((stat, i) => (
+             <div key={i} className="flex flex-col items-center">
+               <span className="text-brand-primary font-bold text-lg">{stat.value}</span>
+               <span className="text-brand-muted text-xs uppercase tracking-wider">{stat.label}</span>
+             </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Two columns (default)
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
@@ -36,37 +96,32 @@ export function Hero() {
         {/* Left Column */}
         <div className="flex flex-col items-start gap-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-brand-border rounded-full text-xs font-mono text-brand-accent font-medium tracking-wide">
-            <span>GENESIS DROP</span>
-            <span className="w-1 h-1 rounded-full bg-brand-primary-light/30"></span>
-            <span>BY @{config.targetAccount}</span>
+            <span>{tagline}</span>
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold text-brand-accent tracking-tighter leading-[1.1]">
-            <span className="block text-brand-primary font-serif">LuxVault</span>
-            WL Terminal
+            <span className="block text-brand-primary font-serif">{title}</span>
           </h1>
           
           <p className="text-lg md:text-xl text-brand-primary/80 max-w-md">
-            {config.totalSupply} LuxVault WL. {config.mintPrice}.
+            {subtitle}
           </p>
 
           <button 
-            onClick={() => document.getElementById("wl-stages")?.scrollIntoView({ behavior: "smooth" })}
-            className="mt-4 bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-8 py-4 rounded-sm flex items-center gap-3 font-medium tracking-wide transition-all group"
+            onClick={handleButtonClick}
+            className={`${sizeClasses} ${effectClasses} rounded-sm flex items-center gap-3 font-medium tracking-wide transition-all group border`}
           >
-            CLAIM TEST DROP WL
+            {buttonText}
             <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
           </button>
 
           <div className="mt-8 flex items-center gap-8 font-mono text-sm border-t border-brand-border pt-6 w-full max-w-sm">
-             <div className="flex flex-col">
-                <span className="text-brand-primary font-bold text-lg">{config.totalSupply}</span>
-                <span className="text-brand-muted text-xs uppercase tracking-wider">Total</span>
-             </div>
-             <div className="flex flex-col">
-                <span className="text-brand-primary font-bold text-lg">{config.mintPrice}</span>
-                <span className="text-brand-muted text-xs uppercase tracking-wider">Price</span>
-             </div>
+            {stats.map((stat, i) => (
+               <div key={i} className="flex flex-col">
+                 <span className="text-brand-primary font-bold text-lg">{stat.value}</span>
+                 <span className="text-brand-muted text-xs uppercase tracking-wider">{stat.label}</span>
+               </div>
+            ))}
           </div>
         </div>
 
@@ -96,17 +151,15 @@ export function Hero() {
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Type</p>
                 <p className="font-semibold text-brand-primary">LuxVault WL</p>
               </div>
-              <div>
-                <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Total Supply</p>
-                <p className="font-semibold text-brand-primary">{config.totalSupply}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Mint Price</p>
-                <p className="font-semibold text-brand-primary">{config.mintPrice}</p>
-              </div>
+              {stats.map((stat, i) => (
+                <div key={i}>
+                  <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">{stat.label}</p>
+                  <p className="font-semibold text-brand-primary">{stat.value}</p>
+                </div>
+              ))}
               <div className="bg-brand-bg-light/50 p-2 -ml-2 rounded-sm">
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Mint Status</p>
-                <p className="font-semibold text-brand-primary">{config.mintPrice}</p>
+                <p className="font-semibold text-brand-primary">{stats[1]?.value || "Live"}</p>
               </div>
               <div className="bg-brand-bg-light/50 p-2 -ml-2 rounded-sm">
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">WL Status</p>

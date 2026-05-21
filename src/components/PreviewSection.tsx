@@ -1,6 +1,24 @@
 import { Lock, Settings, LayoutTemplate, Palette, MonitorPlay } from "lucide-react";
 
-export function PreviewSection() {
+interface PreviewSectionProps {
+  data?: {
+    title?: string;
+    subtitle?: string;
+    cardTop?: string;
+    cardBottom?: string;
+    lockHeading?: string;
+    lockSubtitle?: string;
+  };
+}
+
+export function PreviewSection({ data }: PreviewSectionProps) {
+  const title = data?.title || "Preview your LuxVault signal";
+  const subtitle = data?.subtitle || "Customize your terminal. Reveal your signal.";
+  const cardTop = data?.cardTop || "LuxVault";
+  const cardBottom = data?.cardBottom || "Coming Soon";
+  const lockHeading = data?.lockHeading || "Coming Soon";
+  const lockSubtitle = data?.lockSubtitle || "Signal preview unlocks at mint";
+
   const menuItems = [
     { icon: <LayoutTemplate size={18} />, label: "Background & Theme" },
     { icon: <Settings size={18} />, label: "Signal Effects" },
@@ -20,10 +38,10 @@ export function PreviewSection() {
           <div className="flex flex-col gap-10">
             <div>
               <h2 className="text-4xl md:text-5xl font-serif text-brand-bg-light font-bold tracking-tight mb-4">
-                Preview your LuxVault signal
+                {title}
               </h2>
               <p className="text-brand-bg-light/70 text-lg">
-                Customize your terminal. Reveal your signal.
+                {subtitle}
               </p>
             </div>
 
@@ -45,12 +63,12 @@ export function PreviewSection() {
               
               {/* Top left text */}
               <div className="absolute top-6 left-6 text-xs font-semibold tracking-widest text-brand-bg-light/40 uppercase">
-                LuxVault
+                {cardTop}
               </div>
 
               {/* Bottom text */}
               <div className="absolute bottom-6 left-6 text-xs font-mono tracking-widest text-brand-bold text-brand-bg-light/40 uppercase">
-                Coming Soon
+                {cardBottom}
               </div>
 
               {/* Center Lock Message */}
@@ -59,8 +77,8 @@ export function PreviewSection() {
                   <Lock size={18} className="text-brand-bg-light/60" />
                 </div>
                 <div className="text-center">
-                   <p className="font-bold tracking-wider text-brand-bg-light uppercase">Coming Soon</p>
-                   <p className="text-xs text-brand-bg-light/50 font-mono mt-1">Signal preview unlocks at mint</p>
+                   <p className="font-bold tracking-wider text-brand-bg-light uppercase">{lockHeading}</p>
+                   <p className="text-xs text-brand-bg-light/50 font-mono mt-1">{lockSubtitle}</p>
                 </div>
               </div>
               

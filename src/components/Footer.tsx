@@ -3,12 +3,24 @@ import { Key, Loader2 } from "lucide-react";
 import { useWallet } from "./WalletContext";
 import { apiClient } from "../lib/apiClient";
 
-export function Footer() {
+interface FooterProps {
+  data?: {
+    logoText?: string;
+    tagline?: string;
+    copyright?: string;
+  };
+}
+
+export function Footer({ data }: FooterProps) {
   const { walletAddress, connectWallet, loading } = useWallet();
   const [config, setConfig] = useState({
     totalSupply: "1111",
     mintPrice: "Free Mint"
   });
+
+  const logoText = data?.logoText || "LuxVault";
+  const tagline = data?.tagline || `${config.totalSupply} LuxVault WL. ${config.mintPrice}.`;
+  const copyright = data?.copyright || "© LuxVault. All Rights Reserved.";
 
   useEffect(() => {
     const load = async () => {
@@ -37,13 +49,13 @@ export function Footer() {
           {/* Logo & Copyright */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <span className="font-bold text-xl tracking-widest uppercase">LuxVault</span>
+              <span className="font-bold text-xl tracking-widest uppercase">{logoText}</span>
             </div>
             <p className="text-sm font-mono text-brand-bg-light/60">
-              {config.totalSupply} LuxVault WL. {config.mintPrice}.
+              {tagline}
             </p>
             <p className="text-xs font-mono text-brand-bg-light/40 mt-2">
-              © LuxVault. All Rights Reserved.
+              {copyright}
             </p>
           </div>
 

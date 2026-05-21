@@ -3,12 +3,22 @@ import { useWallet } from "./WalletContext";
 import { apiClient, WLSubmission } from "../lib/apiClient";
 import { CheckCircle2, AlertCircle, Loader2, Search } from "lucide-react";
 
-export function WLChecker() {
+interface WLCheckerProps {
+  data?: {
+    heading?: string;
+    description?: string;
+  };
+}
+
+export function WLChecker({ data }: WLCheckerProps) {
   const { walletAddress } = useWallet();
   const [searchAddress, setSearchAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [lookedUp, setLookedUp] = useState(false);
   const [result, setResult] = useState<WLSubmission | null>(null);
+
+  const heading = data?.heading || "WL Checker";
+  const description = data?.description || "Look up your wallet to see your current status across all stages instantly.";
 
   useEffect(() => {
     if (walletAddress) {
@@ -74,10 +84,10 @@ export function WLChecker() {
         <div>
           <p className="text-xs font-mono tracking-widest text-brand-accent uppercase mb-3">// ALLOCATION STATUS</p>
           <h2 className="text-4xl md:text-5xl font-serif text-brand-primary font-bold tracking-tight mb-4">
-            WL Checker
+            {heading}
           </h2>
           <p className="text-brand-primary/70 text-lg max-w-sm leading-relaxed">
-            Look up your wallet to see your current status across all stages instantly.
+            {description}
           </p>
         </div>
 

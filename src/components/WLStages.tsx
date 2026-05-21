@@ -54,7 +54,17 @@ const Task = ({ label, placeholder, icon, isInput = true, value, onChange, onCli
   </div>
 );
 
-export function WLStages() {
+interface WLStagesProps {
+  data?: {
+    heading?: string;
+    description?: string;
+    targetAccount?: string;
+    targetPostUrl?: string;
+    requiredText?: string;
+  };
+}
+
+export function WLStages({ data }: WLStagesProps) {
   const { walletAddress } = useWallet();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [verifiedActions, setVerifiedActions] = useState({ follow: false, retweet: false, tweet: false });
@@ -75,37 +85,11 @@ export function WLStages() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [initialLoading, setInitialLoading] = useState(false);
   
-  const [campaignConfig, setCampaignConfig] = useState({
-    targetPostUrl: "https://x.com/LuxVault_/status/2054056009291980861?s=20",
-    targetAccount: "LuxVault_",
-    requiredText: "@LuxVault_",
-    totalSupply: "1111",
-    mintPrice: "Free Mint",
-    campaignActive: true
-  });
-
-  const { targetPostUrl, targetAccount, requiredText } = campaignConfig;
-
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const config = await apiClient.getCampaignConfig();
-        if (config) {
-          setCampaignConfig({
-            targetPostUrl: config.targetPostUrl || "https://x.com/LuxVault_/status/2054056009291980861?s=20",
-            targetAccount: config.targetAccount || "LuxVault_",
-            requiredText: config.requiredText || "@LuxVault_",
-            totalSupply: config.totalSupply || "1111",
-            mintPrice: config.mintPrice || "Free Mint",
-            campaignActive: config.campaignActive !== undefined ? config.campaignActive : true
-          });
-        }
-      } catch (err) {
-        console.error("Failed to load campaign config in stages:", err);
-      }
-    };
-    fetchConfig();
-  }, []);
+  const heading = data?.heading || "WL Stages";
+  const description = data?.description || "Stages unlock sequentially. Pass verification before allocation.";
+  const targetAccount = data?.targetAccount || "LuxVault_";
+  const targetPostUrl = data?.targetPostUrl || "https://x.com/LuxVault_/status/2054056009291980861?s=20";
+  const requiredText = data?.requiredText || "@LuxVault_";
 
   const saveSubmissionToBackend = async (stateToSave: typeof formState) => {
     if (!walletAddress) return;
@@ -343,9 +327,9 @@ export function WLStages() {
           {saveStatus === "error" && <span className="text-xs text-red-400 font-mono flex items-center gap-1.5">Error auto-saving</span>}
         </div>
         <h2 className="text-4xl md:text-5xl font-serif text-brand-primary font-bold tracking-tight mb-4 text-white">
-          WL Stages
+          {heading}
         </h2>
-        <p className="text-white">Stages unlock sequentially. Pass verification before allocation.</p>
+        <p className="text-white">{description}</p>
         
         <div className="mt-8">
           <button 

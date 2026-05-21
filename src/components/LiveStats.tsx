@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "../lib/apiClient";
 
-export function LiveStats() {
+interface LiveStatsProps {
+  data?: {
+    stats?: Array<{
+      title: string;
+      value: string;
+      subtext?: string;
+      action?: string;
+      active?: boolean;
+    }>;
+  };
+}
+
+export function LiveStats({ data }: LiveStatsProps) {
   const [totalSupply, setTotalSupply] = useState("1111");
 
   useEffect(() => {
@@ -18,7 +30,7 @@ export function LiveStats() {
     fetchConfig();
   }, []);
 
-  const stats = [
+  const defaultStats = [
     {
       title: "WL STAGES",
       value: "3/3",
@@ -45,6 +57,8 @@ export function LiveStats() {
       active: false
     }
   ];
+
+  const stats = data?.stats || defaultStats;
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-brand-border/60">

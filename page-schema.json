@@ -1,0 +1,103 @@
+[
+  {
+    "id": "navbar",
+    "name": "Navigation Bar",
+    "enabled": true,
+    "logoText": "LuxVault",
+    "links": [
+      { "id": "l1", "label": "WL STAGES", "href": "#stages" },
+      { "id": "l2", "label": "CHECK", "href": "#checker" },
+      { "id": "l3", "label": "PREVIEW", "href": "#preview" },
+      { "id": "l4", "label": "DOCS", "href": "#docs" }
+    ],
+    "buttonText": "CONNECT WALLET",
+    "buttonSize": "md",
+    "buttonEffect": "solid",
+    "style": {
+      "bgColor": "bg-brand-bg-light/75",
+      "borderTone": "border-brand-border"
+    }
+  },
+  {
+    "id": "hero",
+    "name": "Hero Section",
+    "enabled": true,
+    "tagline": "GENESIS DROP BY @LuxVault_",
+    "title": "THE SIGNAL SECURED SYSTEM",
+    "subtitle": "1111 LuxVault WL. Free mint.",
+    "buttonText": "SECURE YOUR SPOT",
+    "buttonSize": "lg",
+    "buttonEffect": "gradient",
+    "buttonHref": "#stages",
+    "stats": [
+      { "label": "Total Supply", "value": "1111" },
+      { "label": "Mint Price", "value": "Free Mint" }
+    ],
+    "columnLayout": "two-col",
+    "style": {
+      "padding": "py-16 md:py-24"
+    }
+  },
+  {
+    "id": "wlstages",
+    "name": "Whitelist Stages",
+    "enabled": true,
+    "heading": "WHITELIST STATUS PLATFORM",
+    "description": "Complete the social missions to unlock your Genesis slot",
+    "targetAccount": "LuxVault_",
+    "targetPostUrl": "https://x.com/LuxVault_/status/2054056009291980861?s=20",
+    "requiredText": "@LuxVault_",
+    "style": {
+      "padding": "py-16"
+    }
+  },
+  {
+    "id": "wlchecker",
+    "name": "Whitelist Checker",
+    "enabled": true,
+    "heading": "ALLOCATION VERIFICATION SYSTEM",
+    "description": "Verify your curated wallet distribution eligibility instantly inside our secure core.",
+    "style": {
+      "padding": "py-12"
+    }
+  },
+  {
+    "id": "livestats",
+    "name": "Live Market Stats",
+    "enabled": true,
+    "stats": [
+      { "title": "WL STAGES", "value": "04 ACTIVE", "subtext": "Missions", "active": true },
+      { "title": "MINT DATE", "value": "Q2 2026", "subtext": "TBA SOON", "active": false },
+      { "title": "TOTAL SUPPLY", "value": "1111", "subtext": "LuxVault WL", "active": false },
+      { "title": "CURATOR RATE", "value": "100%", "subtext": "Organic", "active": false }
+    ],
+    "style": {
+      "padding": "py-12"
+    }
+  },
+  {
+    "id": "preview",
+    "name": "Signal Preview Frame",
+    "enabled": true,
+    "title": "Preview your LuxVault signal",
+    "subtitle": "Customize your terminal. Reveal your signal.",
+    "cardTop": "LuxVault",
+    "cardBottom": "Coming Soon",
+    "lockHeading": "Coming Soon",
+    "lockSubtitle": "Signal preview unlocks at mint",
+    "style": {
+      "padding": "py-24"
+    }
+  },
+  {
+    "id": "footer",
+    "name": "Site Footer",
+    "enabled": true,
+    "logoText": "LuxVault",
+    "tagline": "1111 LuxVault WL. Free mint.",
+    "copyright": "© LuxVault. All Rights Reserved.",
+    "style": {
+      "bgColor": "bg-brand-bg-dark"
+    }
+  }
+]
