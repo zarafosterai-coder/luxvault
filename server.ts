@@ -96,6 +96,31 @@ async function startServer() {
     }
   });
 
+  app.post("/api/admin/submissions/reset-all", async (req, res) => {
+    try {
+      await prisma.whitelistTask.deleteMany({});
+      await prisma.twitterConnection.deleteMany({});
+      await prisma.userSubmission.deleteMany({});
+      res.json({ success: true, message: "Hard Purge Completed. Database wiped cleanly." });
+    } catch (error: any) {
+      console.error("POST /api/admin/submissions/reset-all error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/submissions/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      await prisma.whitelistTask.deleteMany({ where: { userId: walletAddress } });
+      await prisma.twitterConnection.deleteMany({ where: { userId: walletAddress } });
+      await prisma.userSubmission.deleteMany({ where: { userId: walletAddress } });
+      res.json({ success: true, message: `Successfully pruned all data for user ${walletAddress}` });
+    } catch (error: any) {
+      console.error(`DELETE /api/admin/submissions/${req.params.walletAddress} error:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const postSubmissionSchema = z.object({
     walletAddress: z.string().min(1, "Wallet address is required"),
     savedWalletAddress: z.string().nullable().optional(),

@@ -48,7 +48,7 @@ import {
 } from "../lib/googleSheets";
 import { apiClient, WLSubmission } from "../lib/apiClient";
 
-// Sibling sub-components for the Live WordPress-like CMS GUI Viewport
+// Sibling sub-components for the Live CMS GUI Viewport
 import { Navbar } from "./Navbar";
 import { Hero } from "./Hero";
 import { WLStages } from "./WLStages";
@@ -88,7 +88,9 @@ export function AdminDashboard() {
     targetAccount: "LuxVault_",
     requiredText: "@LuxVault_",
     totalSupply: "1111",
-    mintPrice: "Free Mint"
+    mintPrice: "Free Mint",
+    heading: "Whitelist Stages",
+    description: "Stages unlock sequentially. Pass verification before allocation."
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configSaveStatus, setConfigSaveStatus] = useState<"idle" | "success" | "error">("idle");
@@ -101,13 +103,17 @@ export function AdminDashboard() {
   // Selected sub for detail overlay
   const [selectedSubmission, setSelectedSubmission] = useState<WLSubmission | null>(null);
 
-  // CMS state for visual WordPress-like drag and drop editor
+  // CMS state for visual drag and drop editor
   const [activeTab, setActiveTab] = useState<"database" | "cms">("database");
   const [cmsLayout, setCmsLayout] = useState<any[]>([]);
   const [isCmsLoading, setIsCmsLoading] = useState(false);
   const [cmsSaveStatus, setCmsSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [cmsMessage, setCmsMessage] = useState("");
   const [activeAccordion, setActiveAccordion] = useState<string>("hero");
+
+  // Viewport simulator responsiveness state
+  const [viewportMode, setViewportMode] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [customZoom, setCustomZoom] = useState<number>(0.55);
 
   // Initialize Auth state for Google sheets
   useEffect(() => {
@@ -155,13 +161,14 @@ export function AdminDashboard() {
     try {
       const data = await apiClient.getCampaignConfig();
       if (data) {
-        setCampaignConfig({
+        setCampaignConfig(prev => ({
+          ...prev,
           targetPostUrl: data.targetPostUrl || "https://x.com/LuxVault_/status/2054056009291980861?s=20",
           targetAccount: data.targetAccount || "LuxVault_",
           requiredText: data.requiredText || "@LuxVault_",
           totalSupply: data.totalSupply || "1111",
           mintPrice: data.mintPrice || "Free Mint"
-        });
+        }));
       }
     } catch (err: any) {
       console.error("Failed to fetch campaign config in dashboard:", err);
@@ -174,6 +181,28 @@ export function AdminDashboard() {
     setConfigSaveStatus("idle");
     try {
       const res = await apiClient.saveCampaignConfig(campaignConfig);
+      
+      if (Array.isArray(cmsLayout) && cmsLayout.length > 0) {
+        const updatedLayout = cmsLayout.map(s => {
+          if (s.id === "wlstages") {
+            return {
+              ...s,
+              heading: campaignConfig.heading || "Whitelist Stages",
+              description: campaignConfig.description || "Stages unlock sequentially. Pass verification before allocation.",
+              targetAccount: campaignConfig.targetAccount,
+              targetPostUrl: campaignConfig.targetPostUrl,
+              requiredText: campaignConfig.requiredText
+            };
+          }
+          return s;
+        });
+
+        const cmsRes = await apiClient.saveCMSLayout(updatedLayout);
+        if (cmsRes.success) {
+          setCmsLayout(updatedLayout);
+        }
+      }
+
       if (res.success) {
         setConfigSaveStatus("success");
         setTimeout(() => setConfigSaveStatus("idle"), 3000);
@@ -229,6 +258,14 @@ export function AdminDashboard() {
       const data = await apiClient.getCMSLayout();
       if (Array.isArray(data) && data.length > 0) {
         setCmsLayout(data);
+        const stagesSec = data.find(s => s.id === "wlstages");
+        if (stagesSec) {
+          setCampaignConfig(prev => ({
+            ...prev,
+            heading: stagesSec.heading || "Whitelist Stages",
+            description: stagesSec.description || "Stages unlock sequentially. Pass verification before allocation."
+          }));
+        }
       }
     } catch (err: any) {
       console.error("Failed to load layout in admin panel:", err);
@@ -592,36 +629,7 @@ export function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow space-y-8 w-full">
         
-        {/* Premium tab switcher layout */}
-        <div className="flex border-b border-brand-border/30 pb-px gap-2">
-          <button
-            onClick={() => setActiveTab("database")}
-            className={`cursor-pointer px-5 py-3 border-b-2 text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === "database"
-                ? "border-teal-500 text-teal-400 bg-teal-500/5 font-bold"
-                : "border-transparent text-brand-muted hover:text-white hover:bg-white/5"
-            }`}
-          >
-            <Database size={13} />
-            Database & Analytics
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("cms")}
-            className={`cursor-pointer px-5 py-3 border-b-2 text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === "cms"
-                ? "border-amber-500 text-amber-400 bg-amber-500/5 font-bold"
-                : "border-transparent text-brand-muted hover:text-white hover:bg-white/5"
-            }`}
-          >
-            <Sparkles size={13} className="animate-pulse text-amber-400" />
-            WordPress Drag-N-Drop Visual CMS
-          </button>
-        </div>
-
-        {activeTab === "database" ? (
-          <>
-            {/* Statistics Widgets Grid */}
+        {/* Statistics Widgets Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           <div className="bg-[#0c1215] border border-brand-border/30 rounded p-5 relative overflow-hidden flex items-center gap-4">
@@ -943,127 +951,320 @@ export function AdminDashboard() {
 
         </div>
 
-        {/* Dynamic Campaign Settings & Maintenance Center */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Step 2: Live Whitelist Campaigns Customizer & Real-Time Preview */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           
           {/* Main Campaign Config */}
-          <div className="lg:col-span-2 bg-[#0c1215] border border-brand-border/30 rounded p-6 space-y-6">
-            <div className="border-b border-brand-border/30 pb-4">
-              <h4 className="text-xs font-mono font-bold tracking-wider text-amber-500 uppercase flex items-center gap-1.5">
-                <Sparkles size={14} />
-                Step 2: Customize Campaign Specifications & Rules
-              </h4>
-              <p className="text-xs text-brand-muted mt-1 leading-relaxed">
-                Configure tweet mentioning requirements, total whitelists quota, pricing metadata, and active verification post URLs instantly.
-              </p>
-            </div>
-            
-            <form onSubmit={handleSaveCampaignConfig} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Target X Username</label>
-                  <input
-                    type="text"
-                    value={campaignConfig.targetAccount}
-                    onChange={(e) => setCampaignConfig({...campaignConfig, targetAccount: e.target.value})}
-                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
-                    placeholder="LuxVault_"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Required Mention Word</label>
-                  <input
-                    type="text"
-                    value={campaignConfig.requiredText}
-                    onChange={(e) => setCampaignConfig({...campaignConfig, requiredText: e.target.value})}
-                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
-                    placeholder="@LuxVault_"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Validation Target Post URL (Like & Retweet Target)</label>
-                <input
-                  type="text"
-                  value={campaignConfig.targetPostUrl}
-                  onChange={(e) => setCampaignConfig({...campaignConfig, targetPostUrl: e.target.value})}
-                  className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
-                  placeholder="https://x.com/LuxVault_/status/..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Total Whitelist Supply</label>
-                  <input
-                    type="text"
-                    value={campaignConfig.totalSupply}
-                    onChange={(e) => setCampaignConfig({...campaignConfig, totalSupply: e.target.value})}
-                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
-                    placeholder="1111"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Mint Status Text Tag</label>
-                  <input
-                    type="text"
-                    value={campaignConfig.mintPrice}
-                    onChange={(e) => setCampaignConfig({...campaignConfig, mintPrice: e.target.value})}
-                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
-                    placeholder="Free Mint"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-between gap-4">
-                {configSaveStatus !== "idle" && (
-                  <span className={`text-[10px] font-mono ${configSaveStatus === "success" ? "text-emerald-400" : "text-red-400"}`}>
-                    {configSaveStatus === "success" ? "✓ Done: Settings initialized & saved!" : `⚠️ Error: ${configSaveMessage}`}
-                  </span>
-                )}
-                <button
-                  type="submit"
-                  disabled={isSavingConfig}
-                  className="cursor-pointer ml-auto bg-amber-500 hover:bg-amber-600 text-black font-semibold py-2 px-5 rounded text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                >
-                  <Check size={14} />
-                  Save Settings & Update UI
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Destructive purges */}
-          <div className="bg-[#1c0f0f]/40 border border-red-900/40 rounded p-6 flex flex-col justify-between">
+          <div className="xl:col-span-5 bg-[#0c1215] border border-brand-border/30 rounded p-6 space-y-6 flex flex-col justify-between">
             <div>
-              <div className="border-b border-red-900/40 pb-4">
-                <h4 className="text-xs font-mono font-bold tracking-wider text-red-400 uppercase flex items-center gap-1.5">
-                  <AlertTriangle size={14} />
-                  Destructive Purge Center
+              <div className="border-b border-brand-border/30 pb-4">
+                <h4 className="text-xs font-mono font-bold tracking-wider text-amber-500 uppercase flex items-center gap-1.5">
+                  <Sparkles size={14} />
+                  Step 2: Customize Campaigns & Missions Copy
                 </h4>
                 <p className="text-xs text-brand-muted mt-1 leading-relaxed">
-                  Reset whitelist metric progressions or securely clean user submission caches.
+                  Configure text copy, X tasks, hashtags, verified verification posts, and total allocations for the sequentially unlocked whitelist missions.
                 </p>
               </div>
+              
+              <form onSubmit={handleSaveCampaignConfig} className="space-y-4 mt-6">
+                
+                {/* Visual title & description */}
+                <div className="space-y-4 border-b border-brand-border/20 pb-4">
+                  <span className="text-[10px] font-mono text-amber-500 uppercase tracking-wider">// 🖥️ MISSION HEADINGS COPY</span>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Campaign Headline Title</label>
+                    <input
+                      type="text"
+                      value={campaignConfig.heading || ""}
+                      onChange={(e) => setCampaignConfig({...campaignConfig, heading: e.target.value})}
+                      className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                      placeholder="Whitelist Stages"
+                    />
+                  </div>
 
-              <div className="mt-4 p-3 bg-red-950/20 border border-red-900/20 rounded text-[11px] font-mono text-red-300 leading-relaxed space-y-2">
-                <p className="font-bold uppercase tracking-wider">// HARD DATABASE WIPEOUT</p>
-                <p>This actions wipes clean every single registered user profile, wallet allocations, and tasks state permanently. Irreversible.</p>
-              </div>
-            </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Campaign Description Guidelines</label>
+                    <textarea
+                      rows={2}
+                      value={campaignConfig.description || ""}
+                      onChange={(e) => setCampaignConfig({...campaignConfig, description: e.target.value})}
+                      className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none resize-none leading-relaxed"
+                      placeholder="Stages unlock sequentially. Pass verification before allocation."
+                    />
+                  </div>
+                </div>
 
-            <div className="pt-6">
-              <button
-                onClick={handleGlobalReset}
-                className="cursor-pointer w-full bg-red-600/90 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-red-500/30 shadow-lg"
-              >
-                <AlertTriangle size={14} />
-                Purge All DB Submissions
-              </button>
+                {/* X validation entries */}
+                <div className="space-y-4 border-b border-brand-border/20 pb-4">
+                  <span className="text-[10px] font-mono text-sky-400 uppercase tracking-wider">// 🐦 X (TWITTER) AUTOMATION TARGETS</span>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-brand-muted uppercase font-mono font-bold font-semibold">Target X Username</label>
+                      <input
+                        type="text"
+                        value={campaignConfig.targetAccount}
+                        onChange={(e) => setCampaignConfig({...campaignConfig, targetAccount: e.target.value})}
+                        className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                        placeholder="LuxVault_"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-brand-muted uppercase font-mono font-bold font-semibold">Required Hashtag/Mention</label>
+                      <input
+                        type="text"
+                        value={campaignConfig.requiredText}
+                        onChange={(e) => setCampaignConfig({...campaignConfig, requiredText: e.target.value})}
+                        className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                        placeholder="@LuxVault_"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-brand-muted uppercase font-mono font-bold font-semibold">Validation Target Post URL (Like & Repost Targets)</label>
+                    <input
+                      type="text"
+                      value={campaignConfig.targetPostUrl}
+                      onChange={(e) => setCampaignConfig({...campaignConfig, targetPostUrl: e.target.value})}
+                      className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                      placeholder="https://x.com/LuxVault_/status/..."
+                    />
+                  </div>
+                </div>
+
+                {/* Supply metrics */}
+                <div className="space-y-4 pb-2">
+                  <span className="text-[10px] font-mono text-teal-400 uppercase tracking-wider">// 📈 CAMPAIGN QUOTA CONFIG</span>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-brand-muted uppercase font-mono font-bold font-semibold">Total Whitelist Supply</label>
+                      <input
+                        type="text"
+                        value={campaignConfig.totalSupply}
+                        onChange={(e) => setCampaignConfig({...campaignConfig, totalSupply: e.target.value})}
+                        className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                        placeholder="1111"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-brand-muted uppercase font-mono font-bold font-semibold">Mint Price Tag</label>
+                      <input
+                        type="text"
+                        value={campaignConfig.mintPrice}
+                        onChange={(e) => setCampaignConfig({...campaignConfig, mintPrice: e.target.value})}
+                        className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                        placeholder="Free Mint"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-brand-border/20 flex items-center justify-between gap-4">
+                  <div>
+                    {configSaveStatus !== "idle" && (
+                      <span className={`text-[10px] font-mono ${configSaveStatus === "success" ? "text-emerald-400" : "text-red-400"}`}>
+                        {configSaveStatus === "success" ? "✓ Layout configurations saved!" : `⚠️ Error: ${configSaveMessage}`}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSavingConfig}
+                    className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 px-5 rounded text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <Check size={14} />
+                    Save & Publish Edits
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
 
+          {/* Real-time Live Simulated Viewport */}
+          <div className="xl:col-span-7 bg-[#0c1215] border border-brand-border/30 rounded p-6 space-y-4 select-none flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-brand-border/20 pb-2">
+              <h5 className="text-[10px] font-mono font-bold tracking-widest text-[#14b8a6] uppercase">// Real-Time Live Preview Simulator</h5>
+              <div className="flex items-center gap-1.5 text-[9px] text-brand-muted uppercase font-mono bg-[#0c1215] border border-brand-border/20 px-2 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Direct Live Render
+              </div>
+            </div>
+
+            {/* Browser Sandbox container */}
+            <div className="border border-brand-border/40 rounded bg-[#04080a] overflow-hidden flex flex-col shadow-2xl relative">
+              {/* Browser layout header */}
+              <div className="bg-[#0c1215] px-4 py-2 flex items-center justify-between border-b border-brand-border/20 select-none">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#ef4444] opacity-80"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#f59e0b] opacity-80"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#10b981] opacity-80"></span>
+                </div>
+                <div className="bg-black/60 border border-brand-border/30 rounded text-[9px] text-brand-muted/70 px-10 py-1 font-mono hover:text-white transition-colors cursor-pointer w-2/3 text-center truncate select-none">
+                  https://luxvault-gated-genesis.app/live-sandbox
+                </div>
+                <div className="w-10"></div>
+              </div>
+
+              {/* Viewport Control Bar */}
+              <div className="bg-[#0d1519] px-4 py-1.5 border-b border-brand-border/20 flex flex-wrap items-center justify-between gap-3 select-none">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[8px] font-mono text-brand-muted uppercase tracking-wider mr-1">SIMULATION MODE:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewportMode("desktop");
+                      setCustomZoom(0.55);
+                    }}
+                    className={`px-2 py-0.5 text-[8px] font-mono font-bold tracking-wider rounded transition-all cursor-pointer ${
+                      viewportMode === "desktop"
+                        ? "bg-amber-500 text-black font-extrabold"
+                        : "bg-[#04080a] border border-brand-border/30 text-brand-muted hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    🖥️ Desktop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewportMode("tablet");
+                      setCustomZoom(0.75);
+                    }}
+                    className={`px-2 py-0.5 text-[8px] font-mono font-bold tracking-wider rounded transition-all cursor-pointer ${
+                      viewportMode === "tablet"
+                        ? "bg-amber-500 text-black font-extrabold"
+                        : "bg-[#04080a] border border-brand-border/30 text-brand-muted hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    📟 Tablet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewportMode("mobile");
+                      setCustomZoom(1.0);
+                    }}
+                    className={`px-2 py-0.5 text-[8px] font-mono font-bold tracking-wider rounded transition-all cursor-pointer ${
+                      viewportMode === "mobile"
+                        ? "bg-amber-500 text-black font-extrabold"
+                        : "bg-[#04080a] border border-brand-border/30 text-brand-muted hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    📱 Mobile
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] font-mono text-brand-muted uppercase tracking-wider">Scale:</span>
+                  <div className="flex bg-black/40 border border-brand-border/30 rounded p-0.5">
+                    {[0.35, 0.45, 0.55, 0.75, 1.0].map((z) => {
+                      if (viewportMode === "mobile" && z < 1.0) return null;
+                      if (viewportMode === "tablet" && (z < 0.55 || z > 1.0)) return null;
+                      
+                      return (
+                        <button
+                          type="button"
+                          key={z}
+                          onClick={() => setCustomZoom(z)}
+                          className={`px-1 py-0.5 text-[7px] font-mono rounded transition-colors cursor-pointer ${
+                            customZoom === z
+                              ? "bg-[#14b8a6]/20 text-teal-400 border border-[#14b8a6]/30"
+                              : "text-brand-muted hover:text-white"
+                          }`}
+                        >
+                          {Math.round(z * 100)}%
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Simulated screen body */}
+              <div className="h-[430px] overflow-hidden bg-[#04080a] relative flex justify-center items-start">
+                <div 
+                  style={{
+                    width: viewportMode === "desktop" ? "1280px" : viewportMode === "tablet" ? "768px" : "390px",
+                    transform: `scale(${customZoom})`,
+                    transformOrigin: "top center",
+                    height: `calc(100% / ${customZoom})`,
+                  }}
+                  className="overflow-y-auto bg-[#04080a] scrollbar-thin scrollbar-thumb-brand-border/45 flex flex-col relative shrink-0 transition-all duration-300"
+                >
+                  {cmsLayout.map(sec => {
+                    if (sec.enabled === false) return null;
+                    
+                    const isStagesSec = sec.id === "wlstages";
+                    
+                    // Inject local form edits on the fly so the simulator updates visual copy in real-time instantly as the admin types in the form!
+                    const displayData = isStagesSec ? {
+                      ...sec,
+                      heading: campaignConfig.heading,
+                      description: campaignConfig.description,
+                      targetAccount: campaignConfig.targetAccount,
+                      targetPostUrl: campaignConfig.targetPostUrl,
+                      requiredText: campaignConfig.requiredText
+                    } : sec;
+
+                    return (
+                      <div 
+                        key={sec.id}
+                        className={`relative border-y ${isStagesSec ? 'border-amber-500/80 bg-amber-500/[0.01]' : 'border-transparent'}`}
+                      >
+                        {isStagesSec && (
+                          <div className="absolute top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider z-20 shadow-md">
+                            ACTIVE CAMPAIGN UNDER EDIT
+                          </div>
+                        )}
+                        <div className="pointer-events-none select-none font-sans">
+                          {sec.id === "navbar" && <Navbar data={displayData} />}
+                          {sec.id === "hero" && <Hero data={displayData} />}
+                          {sec.id === "wlstages" && <WLStages data={displayData} />}
+                          {sec.id === "wlchecker" && <WLChecker data={displayData} />}
+                          {sec.id === "livestats" && <LiveStats data={displayData} />}
+                          {sec.id === "preview" && <PreviewSection data={displayData} />}
+                          {sec.id === "footer" && <Footer data={displayData} />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-[10px] font-mono text-brand-muted uppercase text-center">
+              💡 Real-Time Layout Render. Visual edits above apply to the whitelisting stages live.
+            </p>
+          </div>
+
+        </div>
+
+        {/* Step 3: Administrative Purges & Database Maintenance */}
+        <div className="bg-[#1c0f0f]/30 border border-red-900/30 rounded p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-red-500/10 rounded text-red-400 border border-red-500/20 shrink-0 mt-0.5">
+              <AlertTriangle size={20} />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-mono font-bold tracking-wider text-red-400 uppercase flex items-center gap-1.5">
+                Step 3: Administrative Purge Controls
+              </h4>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Reset whitelist metric progressions or securely clean user submission caches. This action wipes clean every single registered user profile, wallet allocations, and tasks state permanently. Irreversible.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGlobalReset}
+            className="cursor-pointer bg-red-600/90 hover:bg-red-700 text-white font-bold py-3 px-6 rounded transition-colors text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-red-500/30 shrink-0 shadow-lg w-full md:w-auto"
+          >
+            <AlertTriangle size={14} />
+            Purge All DB Submissions
+          </button>
         </div>
 
         {/* User Submissions campaigns Database Table */}
@@ -1261,8 +1462,8 @@ export function AdminDashboard() {
           </div>
 
         </div>
-        </>
-        ) : (
+
+        {false && (
           <div className="space-y-6 animate-in fade-in duration-300">
             
             {/* CMS Panel Header controls */}
@@ -1270,7 +1471,7 @@ export function AdminDashboard() {
               <div>
                 <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
                   <Sparkles size={16} className="text-amber-400 animate-pulse" />
-                  WordPress Drag-N-Drop Visual Page Editor [GUI CMS]
+                  LuxVault Drag-N-Drop Visual Page Editor [GUI CMS]
                 </h2>
                 <p className="text-xs text-brand-muted mt-1 max-w-2xl leading-relaxed">
                   Visually build and reorganize your landing page sections in real-time. Change text, hashtags, hyperlinks, button styles, hover effects, and section order.
@@ -2053,7 +2254,7 @@ export function AdminDashboard() {
                 {/* Right controls column: Real-time Live Simulated Viewport */}
                 <div className="xl:col-span-7 space-y-4 sticky top-24 select-none">
                   <div className="flex items-center justify-between border-b border-[#20353f]/40 pb-2">
-                    <h5 className="text-[10px] font-mono font-bold tracking-widest text-teal-400 uppercase">// Live Wordpress-like CMS GUI Viewport Simulator</h5>
+                    <h5 className="text-[10px] font-mono font-bold tracking-widest text-teal-400 uppercase">// Live CMS GUI Viewport Simulator</h5>
                     <div className="flex items-center gap-1.5 text-[9px] text-brand-muted uppercase font-mono bg-[#0c1215] border border-brand-border/20 px-2 py-0.5 rounded">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                       Direct Live Render
@@ -2075,41 +2276,131 @@ export function AdminDashboard() {
                       <div className="w-12"></div>
                     </div>
 
-                    {/* Simulated screen body */}
-                    <div className="h-[650px] overflow-y-auto bg-[#04080a] scrollbar-thin scrollbar-thumb-brand-border/45 flex flex-col relative scale-[1] origin-top transition-transform">
-                      {cmsLayout.map(sec => {
-                        if (sec.enabled === false) return null;
-                        
-                        const isFocused = activeAccordion === sec.id;
+                    {/* Viewport Control Bar */}
+                    <div className="bg-[#0d1519] px-4 py-2 border-b border-brand-border/20 flex flex-wrap items-center justify-between gap-3 select-none">
+                      {/* Left Side: Viewport mode selection */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-mono text-brand-muted uppercase tracking-wider mr-1">SIMULATION MODE:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewportMode("desktop");
+                            setCustomZoom(0.55);
+                          }}
+                          className={`px-2.5 py-1 text-[9px] font-mono font-bold tracking-wider rounded transition-all cursor-pointer ${
+                            viewportMode === "desktop"
+                              ? "bg-amber-500 text-black font-extrabold"
+                              : "bg-[#04080a] border border-brand-border/30 text-brand-muted hover:text-white hover:bg-white/5"
+                          }`}
+                        >
+                          🖥️ Desktop
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewportMode("tablet");
+                            setCustomZoom(0.75);
+                          }}
+                          className={`px-2.5 py-1 text-[9px] font-mono font-bold tracking-wider rounded transition-all cursor-pointer ${
+                            viewportMode === "tablet"
+                              ? "bg-amber-500 text-black font-extrabold"
+                              : "bg-[#04080a] border border-brand-border/30 text-brand-muted hover:text-white hover:bg-white/5"
+                          }`}
+                        >
+                          📟 Tablet
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewportMode("mobile");
+                            setCustomZoom(1.0);
+                          }}
+                          className={`px-2.5 py-1 text-[9px] font-mono font-bold tracking-wider rounded transition-all cursor-pointer ${
+                            viewportMode === "mobile"
+                              ? "bg-amber-500 text-black font-extrabold"
+                              : "bg-[#04080a] border border-brand-border/30 text-brand-muted hover:text-white hover:bg-white/5"
+                          }`}
+                        >
+                          📱 Mobile
+                        </button>
+                      </div>
 
-                        return (
-                          <div 
-                            key={sec.id}
-                            onClick={() => setActiveAccordion(sec.id)}
-                            className={`relative cursor-pointer group transition-all duration-200 border-y ${
-                              isFocused 
-                                ? 'border-amber-500/80 bg-amber-500/[0.01] ring-2 ring-amber-500/40 ring-inset z-[5]' 
-                                : 'border-transparent hover:border-white/10'
-                            }`}
-                          >
-                            {/* Focus label banner overlay */}
-                            <div className="absolute top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black text-[9px] font-mono font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-wider z-20 shadow-md">
-                              Configure {sec.name} Visuals
-                            </div>
+                      {/* Right Side: Zoom adjustment to fit screen limits */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-mono text-brand-muted uppercase tracking-wider">Scale:</span>
+                        <div className="flex bg-black/40 border border-brand-border/30 rounded p-0.5">
+                          {[0.35, 0.45, 0.55, 0.75, 1.0].map((z) => {
+                            if (viewportMode === "mobile" && z < 1.0) return null;
+                            if (viewportMode === "tablet" && (z < 0.55 || z > 1.0)) return null;
                             
-                            {/* Section content rendering */}
-                            <div className="pointer-events-none select-none">
-                              {sec.id === "navbar" && <Navbar data={sec} />}
-                              {sec.id === "hero" && <Hero data={sec} />}
-                              {sec.id === "wlstages" && <WLStages data={sec} />}
-                              {sec.id === "wlchecker" && <WLChecker data={sec} />}
-                              {sec.id === "livestats" && <LiveStats data={sec} />}
-                              {sec.id === "preview" && <PreviewSection data={sec} />}
-                              {sec.id === "footer" && <Footer data={sec} />}
+                            return (
+                              <button
+                                type="button"
+                                key={z}
+                                onClick={() => setCustomZoom(z)}
+                                className={`px-1.5 py-0.5 text-[8px] font-mono rounded transition-colors cursor-pointer ${
+                                  customZoom === z
+                                    ? "bg-[#14b8a6]/20 text-teal-400 border border-[#14b8a6]/30"
+                                    : "text-brand-muted hover:text-white"
+                                }`}
+                              >
+                                {Math.round(z * 100)}%
+                              </button>
+                            );
+                          })}
+                        </div>
+                        
+                        <span className="text-[10px] font-mono text-teal-400 font-semibold bg-teal-500/5 px-2 py-0.5 border border-[#14b8a6]/15 rounded">
+                          {viewportMode === "desktop" ? "1280px" : viewportMode === "tablet" ? "768px" : "390px"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Simulated screen body */}
+                    <div className="h-[650px] overflow-hidden bg-[#04080a] relative flex justify-center items-start">
+                      <div 
+                        style={{
+                          width: viewportMode === "desktop" ? "1280px" : viewportMode === "tablet" ? "768px" : "390px",
+                          transform: `scale(${customZoom})`,
+                          transformOrigin: "top center",
+                          height: `calc(100% / ${customZoom})`,
+                        }}
+                        className="overflow-y-auto bg-[#04080a] scrollbar-thin scrollbar-thumb-brand-border/45 flex flex-col relative shrink-0 transition-all duration-300"
+                      >
+                        {cmsLayout.map(sec => {
+                          if (sec.enabled === false) return null;
+                          
+                          const isFocused = activeAccordion === sec.id;
+
+                          return (
+                            <div 
+                              key={sec.id}
+                              onClick={() => setActiveAccordion(sec.id)}
+                              className={`relative cursor-pointer group transition-all duration-200 border-y ${
+                                isFocused 
+                                  ? 'border-amber-500/80 bg-amber-500/[0.01] ring-2 ring-amber-500/40 ring-inset z-[5]' 
+                                  : 'border-transparent hover:border-white/10'
+                              }`}
+                            >
+                              {/* Focus label banner overlay */}
+                              <div className="absolute top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black text-[9px] font-mono font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-wider z-20 shadow-md">
+                                Configure {sec.name} Visuals
+                              </div>
+                              
+                              {/* Section content rendering */}
+                              <div className="pointer-events-none select-none font-sans">
+                                {sec.id === "navbar" && <Navbar data={sec} />}
+                                {sec.id === "hero" && <Hero data={sec} />}
+                                {sec.id === "wlstages" && <WLStages data={sec} />}
+                                {sec.id === "wlchecker" && <WLChecker data={sec} />}
+                                {sec.id === "livestats" && <LiveStats data={sec} />}
+                                {sec.id === "preview" && <PreviewSection data={sec} />}
+                                {sec.id === "footer" && <Footer data={sec} />}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
