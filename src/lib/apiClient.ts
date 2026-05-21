@@ -216,5 +216,95 @@ export const apiClient = {
       }
       return { success: true, submissions: submissionsList };
     }
+  },
+
+  // Get Campaign Configuration
+  async getCampaignConfig(): Promise<any> {
+    try {
+      const res = await fetch("/api/campaign/config");
+      const data = await parseJsonResponse(res);
+      return data;
+    } catch (err) {
+      console.warn("GET campaign config API failed (using Local Storage fallback):", err);
+      const local = localStorage.getItem("luxvault_v1_campaign_config");
+      if (local) {
+        return JSON.parse(local);
+      }
+      return {
+        targetPostUrl: "https://x.com/LuxVault_/status/2054056009291980861?s=20",
+        targetAccount: "LuxVault_",
+        requiredText: "@LuxVault_",
+        totalSupply: "1111",
+        mintPrice: "Free Mint",
+        campaignActive: true
+      };
+    }
+  },
+
+  // Save Campaign Configuration
+  async saveCampaignConfig(config: any): Promise<{ success: boolean; config: any }> {
+    try {
+      const res = await fetch("/api/campaign/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config)
+      });
+      const data = await parseJsonResponse(res);
+      if (data.success) {
+        return { success: true, config: data.config };
+      }
+      throw new Error(data.error || "Failed raw save config");
+    } catch (err) {
+      console.warn("POST campaign config API failed (using Local Storage fallback):", err);
+      localStorage.setItem("luxvault_v1_campaign_config", JSON.stringify(config));
+      return { success: true, config };
+    }
+  },
+
+  // Delete a specific user submission
+  async deleteSubmission(walletAddress: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch(`/api/admin/submissions/${walletAddress}`, {
+        method: "DELETE"
+      });
+      const data = await parseJsonResponse(res);
+      if (data.success) {
+        return { success: true, message: data.message };
+      }
+      throw new Error(data.error || "Failed delete submission");
+    } catch (err: any) {
+      console.warn("DELETE submission API failed (using Local Storage fallback):", err);
+      localStorage.removeItem(`luxvault_v1_sub_${walletAddress.toLowerCase()}`);
+      return { success: true, message: "Local storage record deallocated successfully." };
+    }
+  },
+
+  // Hard Reset: Delete ALL submissions in the database
+  async resetAllSubmissions(): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch("/api/admin/submissions/reset-all", {
+        method: "POST"
+      });
+      const data = await parseJsonResponse(res);
+      if (data.success) {
+        return { success: true, message: data.message };
+      }
+      throw new Error(data.error || "Failed reset all");
+    } catch (err: any) {
+      console.warn("Reset All API failed (using Local Storage fallback):", err);
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("luxvault_v1_sub_")) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+      } catch (e) {
+        console.error(e);
+      }
+      return { success: true, message: "Wiped all local user simulated campaigns." };
+    }
   }
 };

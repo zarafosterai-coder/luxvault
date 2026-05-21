@@ -1,8 +1,32 @@
+import { useState, useEffect } from "react";
 import { Key, Loader2 } from "lucide-react";
 import { useWallet } from "./WalletContext";
+import { apiClient } from "../lib/apiClient";
 
 export function Footer() {
   const { walletAddress, connectWallet, loading } = useWallet();
+  const [config, setConfig] = useState({
+    totalSupply: "1111",
+    mintPrice: "Free Mint"
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await apiClient.getCampaignConfig();
+        if (data) {
+          setConfig({
+            totalSupply: data.totalSupply || "1111",
+            mintPrice: data.mintPrice || "Free Mint"
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load footer campaign config:", err);
+      }
+    };
+    load();
+  }, []);
+
   return (
     <footer className="w-full bg-brand-bg-dark border-t border-brand-bg-light/10 text-brand-bg-light py-12 relative overflow-hidden">
       <div className="absolute inset-0 bg-noise mix-blend-overlay opacity-30 pointer-events-none"></div>
@@ -16,7 +40,7 @@ export function Footer() {
               <span className="font-bold text-xl tracking-widest uppercase">LuxVault</span>
             </div>
             <p className="text-sm font-mono text-brand-bg-light/60">
-              1111 LuxVault WL. Free mint.
+              {config.totalSupply} LuxVault WL. {config.mintPrice}.
             </p>
             <p className="text-xs font-mono text-brand-bg-light/40 mt-2">
               © LuxVault. All Rights Reserved.

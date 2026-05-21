@@ -1,6 +1,34 @@
 import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { apiClient } from "../lib/apiClient";
 
 export function Hero() {
+  const [config, setConfig] = useState({
+    targetAccount: "LuxVault_",
+    targetPostUrl: "",
+    totalSupply: "1111",
+    mintPrice: "Free Mint"
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await apiClient.getCampaignConfig();
+        if (data) {
+          setConfig({
+            targetAccount: data.targetAccount || "LuxVault_",
+            targetPostUrl: data.targetPostUrl || "",
+            totalSupply: data.totalSupply || "1111",
+            mintPrice: data.mintPrice || "Free Mint"
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    load();
+  }, []);
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
@@ -10,7 +38,7 @@ export function Hero() {
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-brand-border rounded-full text-xs font-mono text-brand-accent font-medium tracking-wide">
             <span>GENESIS DROP</span>
             <span className="w-1 h-1 rounded-full bg-brand-primary-light/30"></span>
-            <span>BY @LuxVault_</span>
+            <span>BY @{config.targetAccount}</span>
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold text-brand-accent tracking-tighter leading-[1.1]">
@@ -19,7 +47,7 @@ export function Hero() {
           </h1>
           
           <p className="text-lg md:text-xl text-brand-primary/80 max-w-md">
-            1111 LuxVault WL. Free mint.
+            {config.totalSupply} LuxVault WL. {config.mintPrice}.
           </p>
 
           <button 
@@ -32,12 +60,12 @@ export function Hero() {
 
           <div className="mt-8 flex items-center gap-8 font-mono text-sm border-t border-brand-border pt-6 w-full max-w-sm">
              <div className="flex flex-col">
-               <span className="text-brand-primary font-bold text-lg">1111</span>
-               <span className="text-brand-muted text-xs uppercase tracking-wider">Total</span>
+                <span className="text-brand-primary font-bold text-lg">{config.totalSupply}</span>
+                <span className="text-brand-muted text-xs uppercase tracking-wider">Total</span>
              </div>
              <div className="flex flex-col">
-               <span className="text-brand-primary font-bold text-lg">Free Mint</span>
-               <span className="text-brand-muted text-xs uppercase tracking-wider">Price</span>
+                <span className="text-brand-primary font-bold text-lg">{config.mintPrice}</span>
+                <span className="text-brand-muted text-xs uppercase tracking-wider">Price</span>
              </div>
           </div>
         </div>
@@ -70,15 +98,15 @@ export function Hero() {
               </div>
               <div>
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Total Supply</p>
-                <p className="font-semibold text-brand-primary">1111</p>
+                <p className="font-semibold text-brand-primary">{config.totalSupply}</p>
               </div>
               <div>
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Mint Price</p>
-                <p className="font-semibold text-brand-primary">Free</p>
+                <p className="font-semibold text-brand-primary">{config.mintPrice}</p>
               </div>
               <div className="bg-brand-bg-light/50 p-2 -ml-2 rounded-sm">
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">Mint Status</p>
-                <p className="font-semibold text-brand-primary">Free Mint</p>
+                <p className="font-semibold text-brand-primary">{config.mintPrice}</p>
               </div>
               <div className="bg-brand-bg-light/50 p-2 -ml-2 rounded-sm">
                 <p className="text-[10px] text-brand-muted uppercase tracking-widest mb-1.5">WL Status</p>

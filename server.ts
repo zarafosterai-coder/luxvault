@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import fs from "fs";
 import { verifyFollowScrape, verifyRetweetScrape, verifyTweetScrape } from "./src/lib/playwright/index.js";
 import { getSubmission, saveSubmission } from "./src/lib/submission/index.js";
 
@@ -60,6 +61,100 @@ async function startServer() {
       res.json({ success: true, submissions });
     } catch (error: any) {
       console.error("GET /api/admin/submissions error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get campaign dynamic configuration
+  app.get("/api/campaign/config", async (req, res) => {
+    try {
+      const configPath = path.join(process.cwd(), "campaign-config.json");
+      if (fs.existsSync(configPath)) {
+        const raw = fs.readFileSync(configPath, "utf-8");
+        return res.json(JSON.parse(raw));
+      }
+      
+      const defaultConfig = {
+        targetPostUrl: "https://x.com/LuxVault_/status/2054056009291980861?s=20",
+        targetAccount: "LuxVault_",
+        requiredText: "@LuxVault_",
+        totalSupply: "1111",
+        mintPrice: "Free Mint",
+        campaignActive: true
+      };
+      fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2), "utf-8");
+      res.json(defaultConfig);
+    } catch (error: any) {
+      console.error("GET /api/campaign/config error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Save campaign dynamic configuration
+  app.post("/api/campaign/config", async (req, res) => {
+    try {
+      const configPath = path.join(process.cwd(), "campaign-config.json");
+      const configSchema = z.object({
+        targetPostUrl: z.string().min(1),
+        targetAccount: z.string().min(1),
+        requiredText: z.string().min(1),
+        totalSupply: z.string().optional(),
+        mintPrice: z.string().optional(),
+        campaignActive: z.boolean().optional()
+      });
+
+      const parsed = configSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0].message });
+      }
+
+      fs.writeFileSync(configPath, JSON.stringify(parsed.data, null, 2), "utf-8");
+      res.json({ success: true, config: parsed.data });
+    } catch (error: any) {
+      console.error("POST /api/campaign/config error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reset/Delete a specific user registration/submissions & tasks
+  app.delete("/api/admin/submissions/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address is required" });
+      }
+      
+      // Delete tasks
+      await prisma.whitelistTask.deleteMany({
+        where: { userId: walletAddress }
+      });
+
+      // Delete twitter connection
+      await prisma.twitterConnection.deleteMany({
+        where: { userId: walletAddress }
+      });
+
+      // Delete submission
+      await prisma.userSubmission.deleteMany({
+        where: { userId: walletAddress }
+      });
+
+      res.json({ success: true, message: `Successfully deleted registration for ${walletAddress}` });
+    } catch (error: any) {
+      console.error("DELETE /api/admin/submissions error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reset ALL submissions & tasks in the SQLite database
+  app.post("/api/admin/submissions/reset-all", async (req, res) => {
+    try {
+      await prisma.whitelistTask.deleteMany({});
+      await prisma.twitterConnection.deleteMany({});
+      await prisma.userSubmission.deleteMany({});
+      res.json({ success: true, message: "Successfully wiped all registrations inside SQLite database" });
+    } catch (error: any) {
+      console.error("POST /api/admin/submissions/reset-all error:", error);
       res.status(500).json({ error: error.message });
     }
   });

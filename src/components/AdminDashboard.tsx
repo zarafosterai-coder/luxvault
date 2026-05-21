@@ -73,6 +73,18 @@ export function AdminDashboard() {
   const [statusMessage, setStatusMessage] = useState("");
   const [configError, setConfigError] = useState<string | null>(null);
 
+  // Campaign Config dynamic state
+  const [campaignConfig, setCampaignConfig] = useState({
+    targetPostUrl: "https://x.com/LuxVault_/status/2054056009291980861?s=20",
+    targetAccount: "LuxVault_",
+    requiredText: "@LuxVault_",
+    totalSupply: "1111",
+    mintPrice: "Free Mint"
+  });
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [configSaveStatus, setConfigSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [configSaveMessage, setConfigSaveMessage] = useState("");
+
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
@@ -122,9 +134,82 @@ export function AdminDashboard() {
     }
   };
 
+  const loadCampaignConfig = async () => {
+    try {
+      const data = await apiClient.getCampaignConfig();
+      if (data) {
+        setCampaignConfig({
+          targetPostUrl: data.targetPostUrl || "https://x.com/LuxVault_/status/2054056009291980861?s=20",
+          targetAccount: data.targetAccount || "LuxVault_",
+          requiredText: data.requiredText || "@LuxVault_",
+          totalSupply: data.totalSupply || "1111",
+          mintPrice: data.mintPrice || "Free Mint"
+        });
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch campaign config in dashboard:", err);
+    }
+  };
+
+  const handleSaveCampaignConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingConfig(true);
+    setConfigSaveStatus("idle");
+    try {
+      const res = await apiClient.saveCampaignConfig(campaignConfig);
+      if (res.success) {
+        setConfigSaveStatus("success");
+        setTimeout(() => setConfigSaveStatus("idle"), 3000);
+      } else {
+        throw new Error("Unspecified save error");
+      }
+    } catch (err: any) {
+      setConfigSaveStatus("error");
+      setConfigSaveMessage(err.message || "Failed saving live settings");
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  const handleGlobalReset = async () => {
+    const confirmation = window.confirm(
+      "CRITICAL SECURITY PROMPT:\n\nAre you absolutely sure you want to PURGE ALL whitelisting user registrations inside the database?\n\nThis will permanently delete all task history and user submissions and cannot be undone."
+    );
+    if (!confirmation) return;
+
+    try {
+      const res = await apiClient.resetAllSubmissions();
+      if (res.success) {
+        alert(res.message);
+        fetchSubmissions();
+      }
+    } catch (err: any) {
+      alert("Reset all failed: " + err.message);
+    }
+  };
+
+  const handleDeleteSingleSubmission = async (walletAddress: string) => {
+    const confirmation = window.confirm(
+      `Are you sure you want to RESET/DELETE registration for user "${walletAddress}"?\n\nThis deletes their whitelisting entries and allows them to sign up again.`
+    );
+    if (!confirmation) return;
+
+    try {
+      const res = await apiClient.deleteSubmission(walletAddress);
+      if (res.success) {
+        alert(res.message);
+        setSelectedSubmission(null);
+        fetchSubmissions();
+      }
+    } catch (err: any) {
+      alert("Delete failed: " + err.message);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchSubmissions();
+      loadCampaignConfig();
     }
   }, [isAuthenticated]);
 
@@ -769,6 +854,129 @@ export function AdminDashboard() {
 
         </div>
 
+        {/* Dynamic Campaign Settings & Maintenance Center */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Main Campaign Config */}
+          <div className="lg:col-span-2 bg-[#0c1215] border border-brand-border/30 rounded p-6 space-y-6">
+            <div className="border-b border-brand-border/30 pb-4">
+              <h4 className="text-xs font-mono font-bold tracking-wider text-amber-500 uppercase flex items-center gap-1.5">
+                <Sparkles size={14} />
+                Step 2: Customize Campaign Specifications & Rules
+              </h4>
+              <p className="text-xs text-brand-muted mt-1 leading-relaxed">
+                Configure tweet mentioning requirements, total whitelists quota, pricing metadata, and active verification post URLs instantly.
+              </p>
+            </div>
+            
+            <form onSubmit={handleSaveCampaignConfig} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Target X Username</label>
+                  <input
+                    type="text"
+                    value={campaignConfig.targetAccount}
+                    onChange={(e) => setCampaignConfig({...campaignConfig, targetAccount: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                    placeholder="LuxVault_"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Required Mention Word</label>
+                  <input
+                    type="text"
+                    value={campaignConfig.requiredText}
+                    onChange={(e) => setCampaignConfig({...campaignConfig, requiredText: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                    placeholder="@LuxVault_"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Validation Target Post URL (Like & Retweet Target)</label>
+                <input
+                  type="text"
+                  value={campaignConfig.targetPostUrl}
+                  onChange={(e) => setCampaignConfig({...campaignConfig, targetPostUrl: e.target.value})}
+                  className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                  placeholder="https://x.com/LuxVault_/status/..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Total Whitelist Supply</label>
+                  <input
+                    type="text"
+                    value={campaignConfig.totalSupply}
+                    onChange={(e) => setCampaignConfig({...campaignConfig, totalSupply: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                    placeholder="1111"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-brand-muted uppercase font-mono font-bold">Mint Status Text Tag</label>
+                  <input
+                    type="text"
+                    value={campaignConfig.mintPrice}
+                    onChange={(e) => setCampaignConfig({...campaignConfig, mintPrice: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
+                    placeholder="Free Mint"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-4">
+                {configSaveStatus !== "idle" && (
+                  <span className={`text-[10px] font-mono ${configSaveStatus === "success" ? "text-emerald-400" : "text-red-400"}`}>
+                    {configSaveStatus === "success" ? "✓ Done: Settings initialized & saved!" : `⚠️ Error: ${configSaveMessage}`}
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  disabled={isSavingConfig}
+                  className="cursor-pointer ml-auto bg-amber-500 hover:bg-amber-600 text-black font-semibold py-2 px-5 rounded text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  <Check size={14} />
+                  Save Settings & Update UI
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Destructive purges */}
+          <div className="bg-[#1c0f0f]/40 border border-red-900/40 rounded p-6 flex flex-col justify-between">
+            <div>
+              <div className="border-b border-red-900/40 pb-4">
+                <h4 className="text-xs font-mono font-bold tracking-wider text-red-400 uppercase flex items-center gap-1.5">
+                  <AlertTriangle size={14} />
+                  Destructive Purge Center
+                </h4>
+                <p className="text-xs text-brand-muted mt-1 leading-relaxed">
+                  Reset whitelist metric progressions or securely clean user submission caches.
+                </p>
+              </div>
+
+              <div className="mt-4 p-3 bg-red-950/20 border border-red-900/20 rounded text-[11px] font-mono text-red-300 leading-relaxed space-y-2">
+                <p className="font-bold uppercase tracking-wider">// HARD DATABASE WIPEOUT</p>
+                <p>This actions wipes clean every single registered user profile, wallet allocations, and tasks state permanently. Irreversible.</p>
+              </div>
+            </div>
+
+            <div className="pt-6">
+              <button
+                onClick={handleGlobalReset}
+                className="cursor-pointer w-full bg-red-600/90 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition-colors text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-red-500/30 shadow-lg"
+              >
+                <AlertTriangle size={14} />
+                Purge All DB Submissions
+              </button>
+            </div>
+          </div>
+
+        </div>
+
         {/* User Submissions campaigns Database Table */}
         <div className="bg-[#0c1215] border border-brand-border/30 rounded p-6 space-y-6">
           
@@ -1110,6 +1318,24 @@ export function AdminDashboard() {
                 </div>
               </div>
 
+            </div>
+
+            {/* Footer actions */}
+            <div className="px-5 py-4 border-t border-brand-border/30 bg-[#0c1316] flex justify-between items-center">
+              <button 
+                onClick={() => handleDeleteSingleSubmission(selectedSubmission.walletAddress)}
+                className="cursor-pointer text-xs font-mono text-red-400 hover:text-red-300 bg-red-950/20 hover:bg-red-950/40 border border-red-900/30 hover:border-red-500/50 px-4 py-2 rounded-sm transition-all flex items-center gap-1.5"
+              >
+                <AlertTriangle size={13} />
+                Prune User Progress
+              </button>
+              
+              <button 
+                onClick={() => setSelectedSubmission(null)}
+                className="cursor-pointer text-xs font-mono text-brand-muted hover:text-white px-4 py-2 hover:bg-white/5 border border-brand-border/20 rounded-sm transition-colors font-semibold"
+              >
+                Close
+              </button>
             </div>
 
           </div>

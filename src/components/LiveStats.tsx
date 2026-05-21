@@ -1,6 +1,23 @@
-import { ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { apiClient } from "../lib/apiClient";
 
 export function LiveStats() {
+  const [totalSupply, setTotalSupply] = useState("1111");
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await apiClient.getCampaignConfig();
+        if (config && config.totalSupply) {
+          setTotalSupply(config.totalSupply);
+        }
+      } catch (err) {
+        console.error("Failed to load campaign config in stats:", err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   const stats = [
     {
       title: "WL STAGES",
@@ -23,7 +40,7 @@ export function LiveStats() {
     },
     {
       title: "TOTAL SUPPLY",
-      value: "1111",
+      value: totalSupply,
       subtext: "LuxVault WL",
       active: false
     }

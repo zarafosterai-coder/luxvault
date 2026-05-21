@@ -75,9 +75,37 @@ export function WLStages() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [initialLoading, setInitialLoading] = useState(false);
   
-  const targetPostUrl = "https://x.com/LuxVault_/status/2054056009291980861?s=20";
-  const targetAccount = "LuxVault_";
-  const requiredText = "@LuxVault_";
+  const [campaignConfig, setCampaignConfig] = useState({
+    targetPostUrl: "https://x.com/LuxVault_/status/2054056009291980861?s=20",
+    targetAccount: "LuxVault_",
+    requiredText: "@LuxVault_",
+    totalSupply: "1111",
+    mintPrice: "Free Mint",
+    campaignActive: true
+  });
+
+  const { targetPostUrl, targetAccount, requiredText } = campaignConfig;
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await apiClient.getCampaignConfig();
+        if (config) {
+          setCampaignConfig({
+            targetPostUrl: config.targetPostUrl || "https://x.com/LuxVault_/status/2054056009291980861?s=20",
+            targetAccount: config.targetAccount || "LuxVault_",
+            requiredText: config.requiredText || "@LuxVault_",
+            totalSupply: config.totalSupply || "1111",
+            mintPrice: config.mintPrice || "Free Mint",
+            campaignActive: config.campaignActive !== undefined ? config.campaignActive : true
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load campaign config in stages:", err);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   const saveSubmissionToBackend = async (stateToSave: typeof formState) => {
     if (!walletAddress) return;
