@@ -48,6 +48,15 @@ import {
 } from "../lib/googleSheets";
 import { apiClient, WLSubmission } from "../lib/apiClient";
 
+// Sibling sub-components for the Live WordPress-like CMS GUI Viewport
+import { Navbar } from "./Navbar";
+import { Hero } from "./Hero";
+import { WLStages } from "./WLStages";
+import { WLChecker } from "./WLChecker";
+import { LiveStats } from "./LiveStats";
+import { PreviewSection } from "./PreviewSection";
+import { Footer } from "./Footer";
+
 export function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem("luxvault_admin_auth") === "true";
@@ -91,6 +100,14 @@ export function AdminDashboard() {
 
   // Selected sub for detail overlay
   const [selectedSubmission, setSelectedSubmission] = useState<WLSubmission | null>(null);
+
+  // CMS state for visual WordPress-like drag and drop editor
+  const [activeTab, setActiveTab] = useState<"database" | "cms">("database");
+  const [cmsLayout, setCmsLayout] = useState<any[]>([]);
+  const [isCmsLoading, setIsCmsLoading] = useState(false);
+  const [cmsSaveStatus, setCmsSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [cmsMessage, setCmsMessage] = useState("");
+  const [activeAccordion, setActiveAccordion] = useState<string>("hero");
 
   // Initialize Auth state for Google sheets
   useEffect(() => {
@@ -206,10 +223,43 @@ export function AdminDashboard() {
     }
   };
 
+  const fetchCMSLayout = async () => {
+    setIsCmsLoading(true);
+    try {
+      const data = await apiClient.getCMSLayout();
+      if (Array.isArray(data) && data.length > 0) {
+        setCmsLayout(data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load layout in admin panel:", err);
+    } finally {
+      setIsCmsLoading(false);
+    }
+  };
+
+  const handlePublishCMS = async () => {
+    setCmsSaveStatus("saving");
+    try {
+      const res = await apiClient.saveCMSLayout(cmsLayout);
+      if (res.success) {
+        setCmsSaveStatus("saved");
+        setCmsMessage(res.message || "Page updated successfully!");
+        setTimeout(() => setCmsSaveStatus("idle"), 4000);
+      } else {
+        throw new Error("API failed to save layout.");
+      }
+    } catch (err: any) {
+      setCmsSaveStatus("error");
+      setCmsMessage(err.message || "Failed to update layout");
+      setTimeout(() => setCmsSaveStatus("idle"), 4000);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchSubmissions();
       loadCampaignConfig();
+      fetchCMSLayout();
     }
   }, [isAuthenticated]);
 
@@ -403,17 +453,13 @@ export function AdminDashboard() {
     })).reverse(); // Oldest to newest
   };
 
-  const timelineData = getTimelineData().length > 0 ? getTimelineData() : [
-    { date: "May 18", Registrations: 3 },
-    { date: "May 19", Registrations: 8 },
-    { date: "May 20", Registrations: 14 }
-  ];
+  const timelineData = getTimelineData();
 
   // Recharts Pie dataset format: Tier allocation
   const pieData = [
-    { name: "Super FCFS Spot", value: fcfsRegisteredCount || 5, color: "#10b981" },
-    { name: "Guaranteed GTD Spot", value: gtdRegisteredCount || 1, color: "#f59e0b" },
-    { name: "Standard Whitelist", value: wlRegisteredCount || 3, color: "#3b82f6" },
+    { name: "Super FCFS Spot", value: fcfsRegisteredCount, color: "#10b981" },
+    { name: "Guaranteed GTD Spot", value: gtdRegisteredCount, color: "#f59e0b" },
+    { name: "Standard Whitelist", value: wlRegisteredCount, color: "#3b82f6" },
   ];
 
   // Filter submissions list
@@ -546,7 +592,36 @@ export function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow space-y-8 w-full">
         
-        {/* Statistics Widgets Grid */}
+        {/* Premium tab switcher layout */}
+        <div className="flex border-b border-brand-border/30 pb-px gap-2">
+          <button
+            onClick={() => setActiveTab("database")}
+            className={`cursor-pointer px-5 py-3 border-b-2 text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === "database"
+                ? "border-teal-500 text-teal-400 bg-teal-500/5 font-bold"
+                : "border-transparent text-brand-muted hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Database size={13} />
+            Database & Analytics
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("cms")}
+            className={`cursor-pointer px-5 py-3 border-b-2 text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === "cms"
+                ? "border-amber-500 text-amber-400 bg-amber-500/5 font-bold"
+                : "border-transparent text-brand-muted hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Sparkles size={13} className="animate-pulse text-amber-400" />
+            WordPress Drag-N-Drop Visual CMS
+          </button>
+        </div>
+
+        {activeTab === "database" ? (
+          <>
+            {/* Statistics Widgets Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           <div className="bg-[#0c1215] border border-brand-border/30 rounded p-5 relative overflow-hidden flex items-center gap-4">
@@ -605,7 +680,7 @@ export function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Main Area Chart: Registration Progression */}
-          <div className="lg:col-span-2 bg-[#0c1215] border border-brand-border/30 rounded p-6">
+          <div className="lg:col-span-2 bg-[#0c1215] border border-brand-border/30 rounded p-6 relative">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h4 className="text-xs font-mono font-bold tracking-wider text-teal-400 uppercase">// REGISTRATION progression TRACKER</h4>
@@ -614,7 +689,14 @@ export function AdminDashboard() {
               <Calendar size={16} className="text-brand-muted" />
             </div>
 
-            <div className="h-[280px] w-full mt-4">
+            <div className="h-[280px] w-full mt-4 relative">
+              {totalEntries === 0 && (
+                <div className="absolute inset-0 bg-[#0c1215]/90 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4 z-10 rounded border border-dashed border-teal-500/20">
+                  <TrendingUp size={32} className="text-teal-500/30 mb-2" />
+                  <p className="text-xs font-mono text-teal-400 uppercase tracking-wider font-bold">// No Registration Progression Data //</p>
+                  <p className="text-[10px] text-brand-muted/70 mt-1.5 max-w-xs">All metric data was purged. Awaiting real-time campaign submissions.</p>
+                </div>
+              )}
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
@@ -638,7 +720,7 @@ export function AdminDashboard() {
           </div>
 
           {/* Pie Chart: WL Tier Allocation Distribution */}
-          <div className="bg-[#0c1215] border border-brand-border/30 rounded p-6 flex flex-col justify-between">
+          <div className="bg-[#0c1215] border border-brand-border/30 rounded p-6 flex flex-col justify-between relative">
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -648,7 +730,14 @@ export function AdminDashboard() {
                 <Layers size={16} className="text-brand-muted" />
               </div>
 
-              <div className="h-[200px] w-full flex items-center justify-center">
+              <div className="h-[200px] w-full flex items-center justify-center relative">
+                {totalEntries === 0 && (
+                  <div className="absolute inset-0 bg-[#0c1215]/90 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4 z-10 rounded border border-dashed border-amber-500/20">
+                    <Layers size={32} className="text-amber-500/30 mb-2" />
+                    <p className="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">// Allocation Share Empty //</p>
+                    <p className="text-[10px] text-brand-muted/70 mt-1.5 max-w-xs">No active wallet tiers are currently locked in the roster.</p>
+                  </div>
+                )}
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -1172,6 +1261,863 @@ export function AdminDashboard() {
           </div>
 
         </div>
+        </>
+        ) : (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            
+            {/* CMS Panel Header controls */}
+            <div className="bg-[#0c1215] border border-brand-border/30 rounded p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                  <Sparkles size={16} className="text-amber-400 animate-pulse" />
+                  WordPress Drag-N-Drop Visual Page Editor [GUI CMS]
+                </h2>
+                <p className="text-xs text-brand-muted mt-1 max-w-2xl leading-relaxed">
+                  Visually build and reorganize your landing page sections in real-time. Change text, hashtags, hyperlinks, button styles, hover effects, and section order.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {cmsSaveStatus !== "idle" && (
+                  <div className={`px-3 py-1.5 border text-xs font-mono rounded ${
+                    cmsSaveStatus === "saved" 
+                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                      : cmsSaveStatus === "saving"
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-300 animate-pulse"
+                      : "bg-red-500/10 border-red-500/30 text-red-300"
+                  }`}>
+                    {cmsSaveStatus === "saved" ? "✓ SUCCESS: " : cmsSaveStatus === "saving" ? "⏳ SAVING: " : "⚠️ ERROR: "} {cmsMessage || "Applying layout overrides"}
+                  </div>
+                )}
+
+                <button
+                  disabled={isCmsLoading || cmsSaveStatus === "saving"}
+                  onClick={handlePublishCMS}
+                  className="cursor-pointer bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold py-3 px-6 rounded text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40"
+                >
+                  <Check size={14} className="stroke-[3]" />
+                  Update & Publish Live Site
+                </button>
+              </div>
+            </div>
+
+            {/* Content editor columns */}
+            {isCmsLoading ? (
+              <div className="p-24 text-center text-xs font-mono text-brand-muted uppercase tracking-widest leading-relaxed">
+                <RefreshCw size={20} className="animate-spin mx-auto mb-3 text-amber-500" />
+                Loading visual editor structural components...
+              </div>
+            ) : cmsLayout.length === 0 ? (
+              <div className="p-24 text-center text-xs font-mono text-brand-muted uppercase tracking-widest leading-relaxed border border-dashed border-brand-border/20 rounded">
+                Could not load visual layout template. Please check page-schema.json.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                
+                {/* Left controls column */}
+                <div className="xl:col-span-5 space-y-6">
+                  
+                  {/* Section Arrangement Control */}
+                  <div className="bg-[#0c1215] border border-brand-border/30 rounded p-6">
+                    <div className="border-b border-brand-border/20 pb-4 mb-4">
+                      <h4 className="text-xs font-mono font-bold tracking-wider text-amber-500 uppercase flex items-center gap-1.5">
+                        <Layers size={14} />
+                        Layout Hierarchy & Visibility
+                      </h4>
+                      <p className="text-[11px] text-brand-muted mt-1 leading-relaxed">
+                        Drag items to reorder, or use Up/Down arrows. Checkboxes toggle section visibility instantly. Click "Configure" to edit text and buttons.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {cmsLayout.map((sec, idx) => {
+                        const isFocused = activeAccordion === sec.id;
+                        
+                        return (
+                          <div 
+                            key={sec.id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", idx.toString());
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const sourceIdxStr = e.dataTransfer.getData("text/plain");
+                              if (!sourceIdxStr) return;
+                              const sourceIdx = parseInt(sourceIdxStr, 10);
+                              if (sourceIdx === idx || isNaN(sourceIdx)) return;
+                              
+                              const updated = [...cmsLayout];
+                              const [removed] = updated.splice(sourceIdx, 1);
+                              updated.splice(idx, 0, removed);
+                              setCmsLayout(updated);
+                            }}
+                            className={`flex items-center justify-between p-3 rounded border transition-all bg-black/40 cursor-grab active:cursor-grabbing ${
+                              isFocused 
+                                ? 'border-amber-500 bg-amber-500/5 shadow-md shadow-amber-950/20' 
+                                : 'border-brand-border/30 hover:border-brand-border/70'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Grabber indicator */}
+                              <div className="text-brand-muted/70 hover:text-white cursor-row-resize select-none font-mono text-sm leading-none">
+                                ☰
+                              </div>
+
+                              <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <input 
+                                  type="checkbox" 
+                                  checked={sec.enabled !== false}
+                                  onChange={() => {
+                                    setCmsLayout(prev => prev.map(s => s.id === sec.id ? { ...s, enabled: !s.enabled } : s));
+                                  }}
+                                  className="rounded bg-black border-brand-border/40 text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
+                                />
+                                <span className={`text-[11px] font-mono tracking-wider font-bold ${sec.enabled === false ? 'text-brand-muted line-through' : 'text-white'}`}>
+                                  {sec.name.toUpperCase()}
+                                </span>
+                              </label>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <button 
+                                disabled={idx === 0}
+                                onClick={() => {
+                                  const updated = [...cmsLayout];
+                                  const temp = updated[idx];
+                                  updated[idx] = updated[idx - 1];
+                                  updated[idx - 1] = temp;
+                                  setCmsLayout(updated);
+                                }}
+                                className="text-[10px] p-1 border border-brand-border/30 hover:border-brand-muted hover:bg-white/5 rounded text-brand-muted hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer font-bold leading-none"
+                                title="Move Up"
+                              >
+                                ▲
+                              </button>
+                              <button 
+                                disabled={idx === cmsLayout.length - 1}
+                                onClick={() => {
+                                  const updated = [...cmsLayout];
+                                  const temp = updated[idx];
+                                  updated[idx] = updated[idx + 1];
+                                  updated[idx + 1] = temp;
+                                  setCmsLayout(updated);
+                                }}
+                                className="text-[10px] p-1 border border-brand-border/30 hover:border-brand-muted hover:bg-white/5 rounded text-brand-muted hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer font-bold leading-none"
+                                title="Move Down"
+                              >
+                                ▼
+                              </button>
+                              <button 
+                                onClick={() => setActiveAccordion(sec.id)}
+                                className={`text-[10px] uppercase font-mono px-2 py-1 rounded border transition-colors cursor-pointer ${
+                                  isFocused 
+                                    ? 'bg-amber-500 text-black border-amber-500 font-bold' 
+                                    : 'bg-[#121c20] hover:bg-brand-border/30 text-brand-muted hover:text-white border-brand-border/30'
+                                }`}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Visual accordion editors */}
+                  <div className="space-y-4">
+                    
+                    {/* NAVBAR EDITOR */}
+                    {activeAccordion === "navbar" && (
+                      <div className="bg-[#0c1215] border border-amber-500/40 rounded p-6 space-y-4 animate-in fade-in duration-200">
+                        <div className="border-b border-brand-border/20 pb-3 flex items-center justify-between">
+                          <h5 className="text-xs font-mono font-bold text-amber-500 uppercase tracking-widest">// NAV BAR TEMPLATE</h5>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase tracking-widest border border-amber-500/20 font-semibold">HEADER</span>
+                        </div>
+
+                        <div className="space-y-3 text-xs font-mono">
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Logo Brand text</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "navbar")?.logoText || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "navbar" ? { ...s, logoText: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white uppercase focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Button Text Label</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "navbar")?.buttonText || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "navbar" ? { ...s, buttonText: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white uppercase focus:outline-none font-bold"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Button Size Dimensions</label>
+                              <select 
+                                value={cmsLayout.find(s => s.id === "navbar")?.buttonSize || "md"} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "navbar" ? { ...s, buttonSize: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/50 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="sm">Small size (sm)</option>
+                                <option value="md">Standard medium (md)</option>
+                                <option value="lg">Large prominent (lg)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Animation & Hover Effect</label>
+                              <select 
+                                value={cmsLayout.find(s => s.id === "navbar")?.buttonEffect || "solid"} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "navbar" ? { ...s, buttonEffect: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/50 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="solid">LuxVault Solid Teal Accent</option>
+                                <option value="gradient">Cosmic Neon Emerald Glow</option>
+                                <option value="outline">Framed Structural Border</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Navbar links */}
+                          <div className="space-y-2 pt-2 border-t border-brand-border/20">
+                            <label className="text-[10px] text-brand-muted uppercase block font-semibold">// Navigation Hyperlinks list</label>
+                            {(cmsLayout.find(s => s.id === "navbar")?.links || []).map((link: any, lIdx: number) => (
+                              <div key={link.id || lIdx} className="grid grid-cols-2 gap-2 items-center bg-black/30 p-2.5 rounded border border-brand-border/20">
+                                <div className="space-y-0.5">
+                                  <span className="text-[8px] text-brand-muted uppercase font-mono">Link caption</span>
+                                  <input 
+                                    type="text" 
+                                    value={link.label} 
+                                    onChange={(e) => {
+                                      const currentLinks = [...(cmsLayout.find(s => s.id === "navbar")?.links || [])];
+                                      currentLinks[lIdx] = { ...currentLinks[lIdx], label: e.target.value };
+                                      setCmsLayout(prev => prev.map(s => s.id === "navbar" ? { ...s, links: currentLinks } : s));
+                                    }}
+                                    className="px-2 py-1 bg-black/60 border border-brand-border/40 focus:border-amber-500 rounded text-[11px] text-white uppercase focus:outline-none w-full"
+                                    placeholder="Label"
+                                  />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="text-[8px] text-brand-muted uppercase font-mono">Anchor / Location</span>
+                                  <input 
+                                    type="text" 
+                                    value={link.href} 
+                                    onChange={(e) => {
+                                      const currentLinks = [...(cmsLayout.find(s => s.id === "navbar")?.links || [])];
+                                      currentLinks[lIdx] = { ...currentLinks[lIdx], href: e.target.value };
+                                      setCmsLayout(prev => prev.map(s => s.id === "navbar" ? { ...s, links: currentLinks } : s));
+                                    }}
+                                    className="px-2 py-1 bg-black/60 border border-brand-border/40 focus:border-amber-500 rounded text-[11px] text-white focus:outline-none w-full"
+                                    placeholder="#stages"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* HERO EDITOR */}
+                    {activeAccordion === "hero" && (
+                      <div className="bg-[#0c1215] border border-amber-500/40 rounded p-6 space-y-4 animate-in fade-in duration-200">
+                        <div className="border-b border-brand-border/20 pb-3 flex items-center justify-between">
+                          <h5 className="text-xs font-mono font-bold text-amber-500 uppercase tracking-widest">// HERO PRESENTATION TEMPLATE</h5>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase tracking-widest border border-amber-500/20 font-semibold">INTRO</span>
+                        </div>
+
+                        <div className="space-y-3 text-xs font-mono">
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Tagline tag (above header)</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "hero")?.tagline || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, tagline: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-teal-300 focus:outline-none uppercase"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase" style={{ fontWeight: "bold" }}>Headline title display text</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "hero")?.title || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, title: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none uppercase font-serif"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Narrative subtitle copy</label>
+                            <textarea 
+                              rows={3}
+                              value={cmsLayout.find(s => s.id === "hero")?.subtitle || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, subtitle: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none resize-none leading-relaxed"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1 border-t border-brand-border/10 pt-2 col-span-2">
+                              <label className="text-[10px] text-brand-muted uppercase">Structural structural template</label>
+                              <select 
+                                value={cmsLayout.find(s => s.id === "hero")?.columnLayout || "two-col"} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, columnLayout: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/50 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="one-col">Single Column (Symmetrical Centered Layout)</option>
+                                <option value="two-col">Two Columns (Split Layout Grid)</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="border-t border-brand-border/20 pt-3 space-y-3">
+                            <p className="text-[10px] text-amber-500 uppercase font-bold">// HERO CENTRAL CALL-TO-ACTION BUTTON</p>
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Button Copy Label</label>
+                              <input 
+                                type="text" 
+                                value={cmsLayout.find(s => s.id === "hero")?.buttonText || ""} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, buttonText: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white uppercase focus:outline-none font-bold"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-brand-muted uppercase">Button Dimensions Size</label>
+                                <select 
+                                  value={cmsLayout.find(s => s.id === "hero")?.buttonSize || "lg"} 
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, buttonSize: val } : s));
+                                  }}
+                                  className="w-full px-3 py-2 bg-black/50 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none cursor-pointer"
+                                >
+                                  <option value="sm">Small size (sm)</option>
+                                  <option value="md">Standard medium (md)</option>
+                                  <option value="lg">Large prominent (lg)</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-brand-muted uppercase">Animation Hover Effect</label>
+                                <select 
+                                  value={cmsLayout.find(s => s.id === "hero")?.buttonEffect || "solid"} 
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, buttonEffect: val } : s));
+                                  }}
+                                  className="w-full px-3 py-2 bg-black/50 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none cursor-pointer"
+                                >
+                                  <option value="solid">LuxVault Solid Teal Accent</option>
+                                  <option value="gradient">Cosmic Emerald Glow Gradient</option>
+                                  <option value="outline">Subtle Framed Outline</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Hyperlink Href Target Anchor</label>
+                              <input 
+                                type="text" 
+                                value={cmsLayout.find(s => s.id === "hero")?.buttonHref || ""} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, buttonHref: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none font-mono"
+                                placeholder="#stages"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Stats parameters */}
+                          <div className="border-t border-brand-border/20 pt-3 space-y-2">
+                            <label className="text-[10px] text-brand-muted uppercase block font-bold">// Stats Indicators on Front Hero Card (Max 2)</label>
+                            {(cmsLayout.find(s => s.id === "hero")?.stats || []).map((stat: any, sIdx: number) => (
+                              <div key={sIdx} className="grid grid-cols-2 gap-2 bg-black/30 p-2 rounded border border-brand-border/20">
+                                <div className="space-y-0.5">
+                                  <span className="text-[8px] text-brand-muted uppercase">Stat Name / Label</span>
+                                  <input 
+                                    type="text" 
+                                    value={stat.label} 
+                                    onChange={(e) => {
+                                      const currentStats = [...(cmsLayout.find(s => s.id === "hero")?.stats || [])];
+                                      currentStats[sIdx] = { ...currentStats[sIdx], label: e.target.value };
+                                      setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, stats: currentStats } : s));
+                                    }}
+                                    className="px-2 py-1 bg-black/60 border border-brand-border/40 focus:border-amber-500 rounded text-[11px] text-white focus:outline-none w-full"
+                                    placeholder="Total Supply"
+                                  />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="text-[8px] text-brand-muted uppercase">Current Value</span>
+                                  <input 
+                                    type="text" 
+                                    value={stat.value} 
+                                    onChange={(e) => {
+                                      const currentStats = [...(cmsLayout.find(s => s.id === "hero")?.stats || [])];
+                                      currentStats[sIdx] = { ...currentStats[sIdx], value: e.target.value };
+                                      setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, stats: currentStats } : s));
+                                    }}
+                                    className="px-2 py-1 bg-black/60 border border-brand-border/40 focus:border-amber-500 rounded text-[11px] text-teal-400 font-bold focus:outline-none w-full"
+                                    placeholder="1111"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* WL STAGES EDITOR */}
+                    {activeAccordion === "wlstages" && (
+                      <div className="bg-[#0c1215] border border-amber-500/40 rounded p-6 space-y-4 animate-in fade-in duration-200">
+                        <div className="border-b border-brand-border/20 pb-3 flex items-center justify-between">
+                          <h5 className="text-xs font-mono font-bold text-amber-500 uppercase tracking-widest">// MISSION STAGES TEMPLATE</h5>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase tracking-widest border border-amber-500/20 font-semibold">STAGES</span>
+                        </div>
+
+                        <div className="space-y-3 text-xs font-mono">
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Header headline title</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "wlstages")?.heading || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "wlstages" ? { ...s, heading: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white uppercase focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Description Guidelines text</label>
+                            <textarea 
+                              rows={3}
+                              value={cmsLayout.find(s => s.id === "wlstages")?.description || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "wlstages" ? { ...s, description: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none resize-none leading-relaxed"
+                            />
+                          </div>
+
+                          <div className="space-y-1 border-t border-brand-border/15 pt-3">
+                            <label className="text-[10px] text-amber-500 uppercase font-bold">// SOCIAL ACCREDITATION RULES</label>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">X (Twitter) Handle target to follow</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "wlstages")?.targetAccount || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "wlstages" ? { ...s, targetAccount: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-teal-300 focus:outline-none font-mono"
+                              placeholder="LuxVault_"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Twitter validation target post URL</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "wlstages")?.targetPostUrl || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "wlstages" ? { ...s, targetPostUrl: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none font-mono"
+                              placeholder="https://x.com/LuxVault_/..."
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Mentions hashtag required in post</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "wlstages")?.requiredText || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "wlstages" ? { ...s, requiredText: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-amber-400 focus:outline-none font-mono"
+                              placeholder="@LuxVault_"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* WL CHECKER EDITOR */}
+                    {activeAccordion === "wlchecker" && (
+                      <div className="bg-[#0c1215] border border-amber-500/40 rounded p-6 space-y-4 animate-in fade-in duration-200">
+                        <div className="border-b border-brand-border/20 pb-3 flex items-center justify-between">
+                          <h5 className="text-xs font-mono font-bold text-amber-500 uppercase tracking-widest">// ROSTER CHECKER TEMPLATE</h5>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase tracking-widest border border-amber-500/20 font-semibold">CHECKER</span>
+                        </div>
+
+                        <div className="space-y-3 text-xs font-mono">
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase font-bold">Eligibility checker main title</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "wlchecker")?.heading || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "wlchecker" ? { ...s, heading: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none uppercase font-serif"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Eligibility checker notes instructions</label>
+                            <textarea 
+                              rows={3}
+                              value={cmsLayout.find(s => s.id === "wlchecker")?.description || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "wlchecker" ? { ...s, description: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none resize-none leading-relaxed"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* LIVE METRICS EDITOR */}
+                    {activeAccordion === "livestats" && (
+                      <div className="bg-[#0c1215] border border-amber-500/40 rounded p-6 space-y-4 animate-in fade-in duration-200">
+                        <div className="border-b border-brand-border/20 pb-3 flex items-center justify-between">
+                          <h5 className="text-xs font-mono font-bold text-amber-500 uppercase tracking-widest">// LIVE METRICS GRID</h5>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase tracking-widest border border-amber-500/20 font-semibold">GRID</span>
+                        </div>
+
+                        <div className="space-y-3 text-xs font-mono">
+                          <label className="text-[10px] text-brand-muted uppercase block font-semibold">// Live stats cards metadata (Total 4 Columns)</label>
+                          {(cmsLayout.find(s => s.id === "livestats")?.stats || []).map((stat: any, sIdx: number) => (
+                            <div key={sIdx} className="bg-black/30 p-3 rounded border border-brand-border/20 space-y-2">
+                              <div className="flex items-center justify-between border-b border-[#20353f] pb-1.5 mb-1.5 select-none">
+                                <span className="text-[10px] text-amber-500 font-mono uppercase font-bold">// METRICS CELL #{sIdx+1}</span>
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={stat.active === true} 
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      const currentStats = [...(cmsLayout.find(s => s.id === "livestats")?.stats || [])];
+                                      currentStats[sIdx] = { ...currentStats[sIdx], active: checked };
+                                      setCmsLayout(prev => prev.map(s => s.id === "livestats" ? { ...s, stats: currentStats } : s));
+                                    }}
+                                    className="rounded bg-black border-brand-border text-amber-500 focus:ring-amber-500 w-3 h-3 cursor-pointer"
+                                  />
+                                  <span className="text-[9px] text-brand-muted uppercase hover:text-white">Active Glow State</span>
+                                </label>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-0.5">
+                                  <span className="text-[8px] text-brand-muted uppercase select-none">Label</span>
+                                  <input 
+                                    type="text" 
+                                    value={stat.title} 
+                                    onChange={(e) => {
+                                      const currentStats = [...(cmsLayout.find(s => s.id === "livestats")?.stats || [])];
+                                      currentStats[sIdx] = { ...currentStats[sIdx], title: e.target.value };
+                                      setCmsLayout(prev => prev.map(s => s.id === "livestats" ? { ...s, stats: currentStats } : s));
+                                    }}
+                                    className="w-full px-2 py-1 bg-black/60 border-brand-border/30 rounded text-xs text-white focus:outline-none"
+                                  />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="text-[8px] text-brand-muted uppercase select-none">Value tag</span>
+                                  <input 
+                                    type="text" 
+                                    value={stat.value} 
+                                    onChange={(e) => {
+                                      const currentStats = [...(cmsLayout.find(s => s.id === "livestats")?.stats || [])];
+                                      currentStats[sIdx] = { ...currentStats[sIdx], value: e.target.value };
+                                      setCmsLayout(prev => prev.map(s => s.id === "livestats" ? { ...s, stats: currentStats } : s));
+                                    }}
+                                    className="w-full px-2 py-1 bg-black/60 border border-brand-border/30 rounded text-xs text-white font-bold focus:outline-none font-serif"
+                                  />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="text-[8px] text-brand-muted uppercase select-none">Subtext</span>
+                                  <input 
+                                    type="text" 
+                                    value={stat.subtext} 
+                                    onChange={(e) => {
+                                      const currentStats = [...(cmsLayout.find(s => s.id === "livestats")?.stats || [])];
+                                      currentStats[sIdx] = { ...currentStats[sIdx], subtext: e.target.value };
+                                      setCmsLayout(prev => prev.map(s => s.id === "livestats" ? { ...s, stats: currentStats } : s));
+                                    }}
+                                    className="w-full px-2 py-1 bg-black/60 border border-brand-border/30 rounded text-xs text-white focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PREVIEW FRAME EDITOR */}
+                    {activeAccordion === "preview" && (
+                      <div className="bg-[#0c1215] border border-amber-500/40 rounded p-6 space-y-4 animate-in fade-in duration-200">
+                        <div className="border-b border-brand-border/20 pb-3 flex items-center justify-between">
+                          <h5 className="text-xs font-mono font-bold text-amber-500 uppercase tracking-widest">// SIGNAL PREVIEW FRAME</h5>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase tracking-widest border border-amber-500/20 font-semibold">PREVIEW</span>
+                        </div>
+
+                        <div className="space-y-3 text-xs font-mono">
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase font-bold">Main title of Section</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "preview")?.title || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "preview" ? { ...s, title: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none font-serif"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase font-bold">Subtitle of Section</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "preview")?.subtitle || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "preview" ? { ...s, subtitle: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 border-t border-brand-border/10 pt-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Card top branding tag</label>
+                              <input 
+                                type="text" 
+                                value={cmsLayout.find(s => s.id === "preview")?.cardTop || ""} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "preview" ? { ...s, cardTop: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none uppercase"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Card bottom tag status</label>
+                              <input 
+                                type="text" 
+                                value={cmsLayout.find(s => s.id === "preview")?.cardBottom || ""} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "preview" ? { ...s, cardBottom: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none uppercase"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Card Locked Screen Title</label>
+                              <input 
+                                type="text" 
+                                value={cmsLayout.find(s => s.id === "preview")?.lockHeading || ""} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "preview" ? { ...s, lockHeading: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-brand-muted uppercase">Card Locked Screen Label</label>
+                              <input 
+                                type="text" 
+                                value={cmsLayout.find(s => s.id === "preview")?.lockSubtitle || ""} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCmsLayout(prev => prev.map(s => s.id === "preview" ? { ...s, lockSubtitle: val } : s));
+                                }}
+                                className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* FOOTER EDITOR */}
+                    {activeAccordion === "footer" && (
+                      <div className="bg-[#0c1215] border border-amber-500/40 rounded p-6 space-y-4 animate-in fade-in duration-200">
+                        <div className="border-b border-brand-border/20 pb-3 flex items-center justify-between">
+                          <h5 className="text-xs font-mono font-bold text-amber-500 uppercase tracking-widest">// FOOTER METADATA HUB</h5>
+                          <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase tracking-widest border border-amber-500/20 font-semibold">FOOTER</span>
+                        </div>
+
+                        <div className="space-y-3 text-xs font-mono">
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Logo Brand label text</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "footer")?.logoText || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "footer" ? { ...s, logoText: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white uppercase focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase">Campaign Footer summary narrative</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "footer")?.tagline || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "footer" ? { ...s, tagline: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs text-white focus:outline-none font-sans"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-brand-muted uppercase font-bold">Copyright notice labels</label>
+                            <input 
+                              type="text" 
+                              value={cmsLayout.find(s => s.id === "footer")?.copyright || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCmsLayout(prev => prev.map(s => s.id === "footer" ? { ...s, copyright: val } : s));
+                              }}
+                              className="w-full px-3 py-2 bg-black/40 border border-brand-border/30 rounded text-xs text-white focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+
+                {/* Right controls column: Real-time Live Simulated Viewport */}
+                <div className="xl:col-span-7 space-y-4 sticky top-24 select-none">
+                  <div className="flex items-center justify-between border-b border-[#20353f]/40 pb-2">
+                    <h5 className="text-[10px] font-mono font-bold tracking-widest text-teal-400 uppercase">// Live Wordpress-like CMS GUI Viewport Simulator</h5>
+                    <div className="flex items-center gap-1.5 text-[9px] text-brand-muted uppercase font-mono bg-[#0c1215] border border-brand-border/20 px-2 py-0.5 rounded">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Direct Live Render
+                    </div>
+                  </div>
+
+                  {/* Browser Sandbox container */}
+                  <div className="border border-brand-border/40 rounded-lg bg-[#04080a] overflow-hidden flex flex-col shadow-2xl relative">
+                    {/* Browser layout header */}
+                    <div className="bg-[#0c1215] px-4 py-2.5 flex items-center justify-between border-b border-brand-border/20 select-none">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] opacity-80"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] opacity-80"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] opacity-80"></span>
+                      </div>
+                      <div className="bg-black/60 border border-brand-border/30 rounded text-[10px] text-brand-muted/70 px-12 py-1.5 font-mono hover:text-white transition-colors cursor-pointer w-2/3 text-center truncate select-none">
+                        https://luxvault-gated-genesis.app/live-sandbox
+                      </div>
+                      <div className="w-12"></div>
+                    </div>
+
+                    {/* Simulated screen body */}
+                    <div className="h-[650px] overflow-y-auto bg-[#04080a] scrollbar-thin scrollbar-thumb-brand-border/45 flex flex-col relative scale-[1] origin-top transition-transform">
+                      {cmsLayout.map(sec => {
+                        if (sec.enabled === false) return null;
+                        
+                        const isFocused = activeAccordion === sec.id;
+
+                        return (
+                          <div 
+                            key={sec.id}
+                            onClick={() => setActiveAccordion(sec.id)}
+                            className={`relative cursor-pointer group transition-all duration-200 border-y ${
+                              isFocused 
+                                ? 'border-amber-500/80 bg-amber-500/[0.01] ring-2 ring-amber-500/40 ring-inset z-[5]' 
+                                : 'border-transparent hover:border-white/10'
+                            }`}
+                          >
+                            {/* Focus label banner overlay */}
+                            <div className="absolute top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black text-[9px] font-mono font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-wider z-20 shadow-md">
+                              Configure {sec.name} Visuals
+                            </div>
+                            
+                            {/* Section content rendering */}
+                            <div className="pointer-events-none select-none">
+                              {sec.id === "navbar" && <Navbar data={sec} />}
+                              {sec.id === "hero" && <Hero data={sec} />}
+                              {sec.id === "wlstages" && <WLStages data={sec} />}
+                              {sec.id === "wlchecker" && <WLChecker data={sec} />}
+                              {sec.id === "livestats" && <LiveStats data={sec} />}
+                              {sec.id === "preview" && <PreviewSection data={sec} />}
+                              {sec.id === "footer" && <Footer data={sec} />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+        )}
 
       </main>
 
