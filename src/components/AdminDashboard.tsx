@@ -71,6 +71,7 @@ export function AdminDashboard() {
   const [isExporting, setIsExporting] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
+  const [configError, setConfigError] = useState<string | null>(null);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,6 +86,7 @@ export function AdminDashboard() {
       (user, token) => {
         setGoogleUser(user);
         setAccessToken(token);
+        setConfigError(null);
       },
       () => {
         setGoogleUser(null);
@@ -128,6 +130,7 @@ export function AdminDashboard() {
 
   const handleGoogleSignIn = async () => {
     try {
+      setConfigError(null);
       const res = await signInWithGoogleSheets();
       if (res) {
         setGoogleUser(res.user);
@@ -135,7 +138,22 @@ export function AdminDashboard() {
         setSyncStatus("idle");
       }
     } catch (err: any) {
-      alert("Google Login failed: " + err.message);
+      console.error("Google Auth failed detailed error:", err);
+      if (err.code === "auth/unauthorized-domain") {
+        setConfigError(
+          "UNAUTHORIZED DOMAIN: This domain ('luxvault-dusky.vercel.app') is not added to your Firebase Authorized Domains list. Please add it in your Firebase Console under 'Authentication' -> 'Settings' -> 'Authorized domains'."
+        );
+      } else if (err.code === "auth/operation-not-allowed") {
+        setConfigError(
+          "OPERATION NOT ALLOWED: 'Google' provider is not enabled in Firebase. Please enable 'Google' inside Firebase Console -> Authentication -> Sign-in method."
+        );
+      } else if (err.code === "auth/popup-blocked") {
+        setConfigError(
+          "POPUP BLOCKED: Google authentication window was blocked. Please enable modal popups in your browser settings for this page."
+        );
+      } else {
+        setConfigError(`Connection Error: ${err.message || "Failed to establish popup channel."}`);
+      }
     }
   };
 
@@ -629,13 +647,21 @@ export function AdminDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <button 
-                    onClick={handleGoogleSignIn}
-                    className="w-full cursor-pointer bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm"
-                  >
-                    <PlusCircle size={14} />
-                    Authorize Google Account
-                  </button>
+                  <div className="space-y-3">
+                    <button 
+                      onClick={handleGoogleSignIn}
+                      className="w-full cursor-pointer bg-brand-primary hover:bg-brand-primary-light text-brand-bg-light px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm"
+                    >
+                      <PlusCircle size={14} />
+                      Authorize Google Account
+                    </button>
+                    {configError && (
+                      <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-300 rounded text-[11px] font-mono leading-relaxed space-y-1">
+                        <p className="font-bold uppercase tracking-wider">// Configuration Alert</p>
+                        <p>{configError}</p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
