@@ -16,6 +16,7 @@ export interface WLSubmission {
   verifiedFollow?: boolean;
   verifiedRetweet?: boolean;
   verifiedTweet?: boolean;
+  createdAt?: string | Date;
 }
 
 // Helper to check if a response is raw HTML (indicates a Vercel routing 404 falling back to index.html)
