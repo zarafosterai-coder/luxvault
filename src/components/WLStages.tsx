@@ -84,6 +84,7 @@ export function WLStages({ data }: WLStagesProps) {
   });
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [initialLoading, setInitialLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const heading = data?.heading || "WL Stages";
   const description = data?.description || "Stages unlock sequentially. Pass verification before allocation.";
@@ -205,6 +206,30 @@ export function WLStages({ data }: WLStagesProps) {
     };
 
     loadSubmission();
+  }, [walletAddress, refreshTrigger]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const origin = event.origin;
+      if (!origin.endsWith(".run.app") && !origin.includes("localhost") && !origin.includes("127.0.0.1")) {
+        return;
+      }
+      
+      if (event.data?.type === "OAUTH_AUTH_SUCCESS") {
+        const username = event.data?.twitterUsername;
+        setXConnected(true);
+        if (username) {
+          setFormState(prev => ({
+            ...prev,
+            twitterUsername: username
+          }));
+        }
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, [walletAddress]);
 
   useEffect(() => {
@@ -226,24 +251,42 @@ export function WLStages({ data }: WLStagesProps) {
       return;
     }
     
+    // Open a blank popup immediately to bypass aggressive browser popup blockers!
+    const authWidth = 550;
+    const authHeight = 700;
+    const left = window.screen.width / 2 - authWidth / 2;
+    const top = window.screen.height / 2 - authHeight / 2;
+    
+    const authWindow = window.open(
+      "", 
+      "twitter_oauth_popup", 
+      `width=${authWidth},height=${authHeight},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+    );
+    
+    if (!authWindow) {
+      alert("Popup blocker detected. Please allow popups for this site to link your X (Twitter) account.");
+      return;
+    }
+    
     try {
       setXConnecting(true);
-      const data = await apiClient.connectX(walletAddress);
-      if (data.connected) {
-        setXConnected(true);
-        // Prompt username fill locally
-        setFormState(prev => {
-          const updated = { ...prev };
-          if (!updated.twitterUsername) {
-            updated.twitterUsername = "@lux_user";
-          }
-          return updated;
-        });
+      // Fetch the generated redirect or login route from our server based on config
+      const res = await fetch(`/api/auth/twitter/url?walletAddress=${walletAddress}`);
+      if (!res.ok) {
+        throw new Error("Failed to construct authorization response");
+      }
+      const data = await res.json();
+      
+      if (data.url) {
+        authWindow.location.href = data.url;
       } else {
-        alert("Failed to connect X.");
+        authWindow.close();
+        alert("Server did not return a valid authentication URL.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("X connection initiation error:", err);
+      authWindow.close();
+      alert("Error initiating X connection flow.");
     } finally {
       setXConnecting(false);
     }
