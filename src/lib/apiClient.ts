@@ -19,11 +19,20 @@ export interface WLSubmission {
   createdAt?: string | Date;
 }
 
-// Helper to check if a response is raw HTML (indicates a Vercel routing 404 falling back to index.html)
+// Helper to check if a response is raw HTML or other non-JSON response (indicates a Vercel routing 404 falling back to index.html or text)
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
-  if (text.trim().startsWith("<")) {
-    throw new Error("HTML markup received instead of JSON (this environment is running as a static frontend bundle).");
+  const contentType = response.headers.get("content-type") || "";
+  const trimmed = text.trim();
+  
+  if (
+    !response.ok || 
+    !contentType.includes("application/json") || 
+    trimmed.startsWith("<") || 
+    trimmed.startsWith("The page") ||
+    (!trimmed.startsWith("{") && !trimmed.startsWith("["))
+  ) {
+    throw new Error("HTML markup or invalid non-JSON text received instead of JSON (this environment is running as a static frontend bundle).");
   }
   return JSON.parse(text);
 }
