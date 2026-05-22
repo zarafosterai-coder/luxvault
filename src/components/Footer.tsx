@@ -14,7 +14,7 @@ interface FooterProps {
 export function Footer({ data }: FooterProps) {
   const { walletAddress, connectWallet, loading } = useWallet();
   const [config, setConfig] = useState({
-    totalSupply: "1111",
+    totalSupply: "888",
     mintPrice: "Free Mint"
   });
 
@@ -28,7 +28,7 @@ export function Footer({ data }: FooterProps) {
         const data = await apiClient.getCampaignConfig();
         if (data) {
           setConfig({
-            totalSupply: data.totalSupply || "1111",
+            totalSupply: data.totalSupply || "888",
             mintPrice: data.mintPrice || "Free Mint"
           });
         }

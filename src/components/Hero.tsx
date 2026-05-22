@@ -17,13 +17,13 @@ interface HeroProps {
 export function Hero({ data }: HeroProps) {
   const tagline = data?.tagline || "GENESIS DROP BY @LuxVault_";
   const title = data?.title || "THE SIGNAL SECURED SYSTEM";
-  const subtitle = data?.subtitle || "1111 LuxVault WL. Free mint.";
+  const subtitle = data?.subtitle || "888 LuxVault WL. Free mint.";
   const buttonText = data?.buttonText || "CLAIM TEST DROP WL";
   const buttonSize = data?.buttonSize || "lg";
   const buttonEffect = data?.buttonEffect || "solid";
   const buttonHref = data?.buttonHref || "#stages";
   const stats = data?.stats || [
-    { "label": "Total Supply", "value": "1111" },
+    { "label": "Total Supply", "value": "888" },
     { "label": "Mint Price", "value": "Free Mint" }
   ];
   const columnLayout = data?.columnLayout || "two-col";

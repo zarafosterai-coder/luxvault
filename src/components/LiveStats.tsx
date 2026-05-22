@@ -14,7 +14,7 @@ interface LiveStatsProps {
 }
 
 export function LiveStats({ data }: LiveStatsProps) {
-  const [totalSupply, setTotalSupply] = useState("1111");
+  const [totalSupply, setTotalSupply] = useState("888");
 
   useEffect(() => {
     const fetchConfig = async () => {

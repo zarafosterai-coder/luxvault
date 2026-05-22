@@ -87,7 +87,7 @@ export function AdminDashboard() {
     targetPostUrl: "https://x.com/LuxVault_/status/2054056009291980861?s=20",
     targetAccount: "LuxVault_",
     requiredText: "@LuxVault_",
-    totalSupply: "1111",
+    totalSupply: "888",
     mintPrice: "Free Mint",
     heading: "Whitelist Stages",
     description: "Stages unlock sequentially. Pass verification before allocation."
@@ -166,7 +166,7 @@ export function AdminDashboard() {
           targetPostUrl: data.targetPostUrl || "https://x.com/LuxVault_/status/2054056009291980861?s=20",
           targetAccount: data.targetAccount || "LuxVault_",
           requiredText: data.requiredText || "@LuxVault_",
-          totalSupply: data.totalSupply || "1111",
+          totalSupply: data.totalSupply || "888",
           mintPrice: data.mintPrice || "Free Mint"
         }));
       }
@@ -1047,7 +1047,7 @@ export function AdminDashboard() {
                         value={campaignConfig.totalSupply}
                         onChange={(e) => setCampaignConfig({...campaignConfig, totalSupply: e.target.value})}
                         className="w-full px-3 py-2 bg-black/40 border border-brand-border/40 focus:border-amber-500 rounded text-xs font-mono text-white focus:outline-none"
-                        placeholder="1111"
+                        placeholder="888"
                       />
                     </div>
                     <div className="space-y-1">
@@ -1896,7 +1896,7 @@ export function AdminDashboard() {
                                       setCmsLayout(prev => prev.map(s => s.id === "hero" ? { ...s, stats: currentStats } : s));
                                     }}
                                     className="px-2 py-1 bg-black/60 border border-brand-border/40 focus:border-amber-500 rounded text-[11px] text-teal-400 font-bold focus:outline-none w-full"
-                                    placeholder="1111"
+                                    placeholder="888"
                                   />
                                 </div>
                               </div>

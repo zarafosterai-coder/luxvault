@@ -234,7 +234,7 @@ export const apiClient = {
         targetPostUrl: "https://x.com/LuxVault_/status/2054056009291980861?s=20",
         targetAccount: "LuxVault_",
         requiredText: "@LuxVault_",
-        totalSupply: "1111",
+        totalSupply: "888",
         mintPrice: "Free Mint",
         campaignActive: true
       };
@@ -346,13 +346,13 @@ export const apiClient = {
           "enabled": true,
           "tagline": "GENESIS DROP BY @LuxVault_",
           "title": "THE SIGNAL SECURED SYSTEM",
-          "subtitle": "1111 LuxVault WL. Free mint.",
+          "subtitle": "888 LuxVault WL. Free mint.",
           "buttonText": "SECURE YOUR SPOT",
           "buttonSize": "lg",
           "buttonEffect": "gradient",
           "buttonHref": "#stages",
           "stats": [
-            { "label": "Total Supply", "value": "1111" },
+            { "label": "Total Supply", "value": "888" },
             { "label": "Mint Price", "value": "Free Mint" }
           ],
           "columnLayout": "two-col",
@@ -384,7 +384,7 @@ export const apiClient = {
           "stats": [
             { "title": "WL STAGES", "value": "04 ACTIVE", "subtext": "Missions", "active": true },
             { "title": "MINT DATE", "value": "Q2 2026", "subtext": "TBA SOON", "active": false },
-            { "title": "TOTAL SUPPLY", "value": "1111", "subtext": "LuxVault WL", "active": false },
+            { "title": "TOTAL SUPPLY", "value": "888", "subtext": "LuxVault WL", "active": false },
             { "title": "CURATOR RATE", "value": "100%", "subtext": "Organic", "active": false }
           ],
           "style": { "padding": "py-12" }
@@ -406,7 +406,7 @@ export const apiClient = {
           "name": "Site Footer",
           "enabled": true,
           "logoText": "LuxVault",
-          "tagline": "1111 LuxVault WL. Free mint.",
+          "tagline": "888 LuxVault WL. Free mint.",
           "copyright": "© LuxVault. All Rights Reserved.",
           "style": { "bgColor": "bg-brand-bg-dark" }
         }
