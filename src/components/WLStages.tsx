@@ -69,7 +69,7 @@ export function WLStages({ data }: WLStagesProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [verifiedActions, setVerifiedActions] = useState({ follow: false, retweet: false, tweet: false });
   const [clickedActions, setClickedActions] = useState({ follow: false, retweet: false, tweet: false });
-  const [xConnected, setXConnected] = useState(false);
+  const [xConnected, setXConnected] = useState(true);
   const [xConnecting, setXConnecting] = useState(false);
 
   const [formState, setFormState] = useState({
@@ -136,7 +136,7 @@ export function WLStages({ data }: WLStagesProps) {
         quoteTweetUrl: "",
         commentUrl: ""
       });
-      setXConnected(false);
+      setXConnected(true);
       setVerifiedActions({ follow: false, retweet: false, tweet: false });
       return;
     }
@@ -516,7 +516,7 @@ export function WLStages({ data }: WLStagesProps) {
   };
 
   const handleVerifyFollow = async () => {
-    if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    if (!walletAddress) return alert("Connect Wallet first");
     if (!clickedActions.follow) {
       alert(`Please click/open the "Follow @${targetAccount}" link first to initiate follow redirection!`);
       return;
@@ -538,7 +538,7 @@ export function WLStages({ data }: WLStagesProps) {
   };
 
   const handleVerifyRetweet = async () => {
-    if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    if (!walletAddress) return alert("Connect Wallet first");
     if (!clickedActions.retweet) {
       alert('Please click/open the "Open and Retweet" link first to visit the tweet!');
       return;
@@ -560,7 +560,7 @@ export function WLStages({ data }: WLStagesProps) {
   };
 
   const handleVerifyTweet = async () => {
-    if (!xConnected || !walletAddress) return alert("Connect X and Wallet first");
+    if (!walletAddress) return alert("Connect Wallet first");
     if (!clickedActions.tweet) {
       alert('Please click/open the "Post tweet about us" link first to compose the tweet!');
       return;
@@ -596,17 +596,6 @@ export function WLStages({ data }: WLStagesProps) {
           {heading}
         </h2>
         <p className="text-white">{description}</p>
-        
-        <div className="mt-8">
-          <button 
-            disabled={xConnected || xConnecting}
-            onClick={handleConnectX}
-            className={`flex items-center gap-2 px-6 py-3 rounded-sm font-semibold tracking-wide transition-colors ${xConnected ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-black text-white hover:bg-gray-800 border border-gray-700'}`}
-          >
-            {xConnecting ? <Loader2 size={16} className="animate-spin" /> : <Twitter size={18} />}
-            {xConnected ? "X (Twitter) Connected" : "Connect X Account"}
-          </button>
-        </div>
       </div>
 
       {/* Cards Grid */}
